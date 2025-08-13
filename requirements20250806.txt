@@ -1,1 +1,13 @@
 Django==4.2.23
+
+# Azureサービス連携
+azure-storage-blob
+azure-cosmos
+azure-search-documents
+openai
+
+# App ServiceでのWebサーバー実行用
+gunicorn
+
+# 環境変数管理（任意だが推奨）
+python-dotenv

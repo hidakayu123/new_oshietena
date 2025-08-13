@@ -70,6 +70,7 @@ def chatcount(request):
         items = list(container.query_items(
             query=query,
             parameters=parameters,
+            partition_key=user_id
         ))
 
         # クエリの結果はリストで返ってくる（この場合は要素が1つのリスト）

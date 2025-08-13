@@ -10,6 +10,13 @@ type UsageResponse = {
   limit: number;
 };
 
+// チャット履歴アイテムの型を定義
+type ChatHistoryItem = {
+    id: string;
+    title: string;
+};
+
+
 const SidebarMenu: React.FC<Props> = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   
@@ -17,6 +24,11 @@ const SidebarMenu: React.FC<Props> = () => {
   const [usageCount, setUsageCount] = useState<UsageResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true); // 初期状態は読み込み中
   const [error, setError] = useState<string | null>(null);
+
+  // チャット履歴表示用のstateを追加
+  const [history, setHistory] = useState<ChatHistoryItem[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     // データを非同期で取得する関数を定義
@@ -44,7 +56,28 @@ const SidebarMenu: React.FC<Props> = () => {
       }
     };
 
-    fetchUsageCount(); // 上で定義した関数を実行
+    // チャット履歴を取得する関数を追加
+    const fetchHistory = async () => {
+        setIsHistoryLoading(true);
+        setHistoryError(null);
+        try {
+            // Djangoで作成したAPIエンドポイントを呼び出す
+            const apiUrl = `${import.meta.env.VITE_API_URL}/get/history/`;
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`HTTPエラー: ${response.status}`);
+            const data: { history: ChatHistoryItem[] } = await response.json();
+            setHistory(data.history); // 取得した履歴をstateに保存
+        } catch (e) {
+            if (e instanceof Error) setHistoryError(e.message);
+            else setHistoryError('不明なエラーが発生しました。');
+            console.error('Failed to fetch history:', e);
+        } finally {
+            setIsHistoryLoading(false);
+        }
+    };
+
+    fetchUsageCount(); 
+    fetchHistory();
 
   }, []); 
   
@@ -104,9 +137,19 @@ const SidebarMenu: React.FC<Props> = () => {
           <button className="new-chat-button">＋ 新規チャット開始</button>
         </div>
         <ul className="chat-history">
-          <li><a href="#">過去のチャットタイトル1</a></li>
-          <li><a href="#">長めのチャットタイトルがここにはい...</a></li>
-          <li><a href="#">過去のチャットタイトル3</a></li>
+            {isHistoryLoading ? (
+                <li>読み込み中...</li>
+            ) : historyError ? (
+                <li className="error">履歴の取得に失敗</li>
+            ) : history.length > 0 ? (
+                history.map(item => (
+                    <li key={item.id}>
+                        <a href={`/chat/${item.id}`}>{item.title}</a>
+                    </li>
+                ))
+            ) : (
+                <li>チャット履歴はありません</li>
+            )}
         </ul>
         <div className="sidebar-footer">
           <UsageDisplay />

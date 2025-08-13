@@ -3,3 +3,14 @@ frontend
 
 /frontend/*
 /node_modules/*
+/Azure_Function/*
+!/frontend/indez.tsx
+!/frontend/authConfig.ts
+!/frontend/src/pages/chat
+/app/__pycache__/*
+/new_oshietena/__pycache__/*
+/__pycache__/*
+
+# Pythonキャッシュファイル
+**/__pycache__/
+*/__pycache__/*
