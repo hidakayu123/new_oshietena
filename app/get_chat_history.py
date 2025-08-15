@@ -1,6 +1,21 @@
 from azure.cosmos import CosmosClient
+import os
+# --- ここに初期化コードを移動する ---
+ENDPOINT = os.environ.get("COSMOS_DB_ENDPOINT")
+KEY = os.environ.get("COSMOS_DB_KEY")
+DATABASE_NAME = 'YourDatabaseName'
+CONTAINER_NAME = 'Conversations'
 
-def fetch_history_for_user(user_id: str) -> list:
+try:
+    client = CosmosClient(ENDPOINT, credential=KEY)
+    database = client.get_database_client(DATABASE_NAME)
+    container = database.get_container_client(CONTAINER_NAME)
+    print("Cosmos DB client initialized successfully in services.py.")
+except Exception as e:
+    print(f"Cosmos DB client initialization failed: {e}")
+    container = None
+
+def fetch_history_for_user(user_id: str, tenant_id: str) -> list:
     """
     指定されたユーザーのチャット履歴（IDとタイトル）をデータベースから取得します。
 
@@ -17,10 +32,11 @@ def fetch_history_for_user(user_id: str) -> list:
         raise Exception("Database connection is not available.")
 
     # クエリを作成: userIdが一致するアイテムのidとtitleだけを取得
-    query = "SELECT c.id, c.title FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC"
+    query = "SELECT c.id, c.title FROM c WHERE c.userId = @userId AND c.tenantId = @tenantId ORDER BY c.createdAt DESC"
     
     parameters = [
-        {"name": "@userId", "value": user_id}
+        {"name": "@userId", "value": user_id},
+        {"name": "@tenantId", "value": tenant_id}
     ]
 
     try:
@@ -28,7 +44,7 @@ def fetch_history_for_user(user_id: str) -> list:
         items = list(container.query_items(
             query=query,
             parameters=parameters,
-            partition_key=user_id
+            partition_key=tenant_id
         ))
         return items
     except Exception as e:

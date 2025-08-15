@@ -20,12 +20,14 @@ from new_oshietena import views
 from app.chat_count import chatcount
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('auth_setup', views.auth_setup, name='auth_setup'),
-    path('chat', views.chatbot, name='chat'),        
-    path("checkcount", chatcount, name="checkcount"),
-    path("save/history", views.savechat, name="save_history"),
-    path('get/history/', views.get_chat_history, name='get_history'),
+    path('api/admin/', admin.site.urls),
+    path('api/auth_setup/', views.auth_setup, name='auth_setup'),
+    path('api/chat/', views.chatbot, name='chat'),        
+    path("api/checkcount/", chatcount, name="checkcount"),
+    path("api/save/history/", views.savechat, name="save_history"),
+    path('api/get/history/', views.get_chat_history, name='get_history'),
+    path('api/v1/auth/microsoft/callback/', views.MSALCallbackView.as_view(), name='msal_callback'),
+    path('api/csrf-token/', views.get_csrf_token, name='csrf-token'),
     # path('config', views.get_config, name='config'),
     # path('chat/stream', views.stream_chat_view, name='stream_chat'),
 ]

@@ -33,7 +33,8 @@ def chatcount(request):
         return JsonResponse({"error": "Database connection failed"}, status=500)
 
     # ユーザー個人のID (例: oidクレーム)
-    user_id = request.user.username                      
+    user_id = request.user.username      
+    tenant_id = request.GET.get('tenant_id')                
 
 
     # --- 2. 当月の開始日と終了日を計算 ---
@@ -53,6 +54,7 @@ def chatcount(request):
         query = (
             "SELECT VALUE COUNT(1) FROM c "
             "WHERE c.userId = @user_id "
+            "AND c.tenantId = @tenantId"
             "AND c.createdAt >= @start_date "
             "AND c.createdAt <= @end_date"
         )
@@ -60,6 +62,7 @@ def chatcount(request):
         # --- パラメータ: @company_idを追加し、日付をISO文字列に変更 ---
         parameters = [
             {"name": "@user_id", "value": user_id},
+            {"name": "@tenantId", "value": tenant_id},
             {"name": "@start_date", "value": start_of_month_utc},
             {"name": "@end_date", "value": end_of_period_utc},
         ]
@@ -70,7 +73,7 @@ def chatcount(request):
         items = list(container.query_items(
             query=query,
             parameters=parameters,
-            partition_key=user_id
+            partition_key=tenant_id
         ))
 
         # クエリの結果はリストで返ってくる（この場合は要素が1つのリスト）
@@ -84,6 +87,7 @@ def chatcount(request):
             "count": count,
             "limit": limit
         }
+        print(response_data)
         return JsonResponse(response_data)
 
     except exceptions.CosmosHttpResponseError as e:

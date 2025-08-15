@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'; // useEffectをインポート
+import React, { useState, useEffect, useCallback } from 'react';
 import './menu.css';
-
+import { useMsal } from "@azure/msal-react";
 // コンポーネントの型を定義
 type Props = {};
 
@@ -29,65 +29,88 @@ const SidebarMenu: React.FC<Props> = () => {
   const [history, setHistory] = useState<ChatHistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const { accounts } = useMsal();
 
-  useEffect(() => {
-    // データを非同期で取得する関数を定義
-    const fetchUsageCount = async () => {
-      try {
-        const apiUrl = `${import.meta.env.VITE_API_URL}/checkcount`;
-        const response = await fetch(apiUrl);
-
-        if (!response.ok) {
-          throw new Error(`HTTPエラー: ${response.status}`);
+  const fetchUsageCount = useCallback(async () => {
+        if (accounts.length === 0) {
+            setError("認証されていません。");
+            setIsLoading(false);
+            return;
         }
 
-        const data: UsageResponse = await response.json();
-        setUsageCount(data); // 取得したデータをstateに保存
-
-      } catch (e) {
-        if (e instanceof Error) {
-          setError(e.message);
-        } else {
-          setError('不明なエラーが発生しました。');
-        }
-        console.error('Failed to fetch usage count:', e);
-      } finally {
-        setIsLoading(false); // 読み込み完了（成功・失敗問わず）
-      }
-    };
-
-    // チャット履歴を取得する関数を追加
-    const fetchHistory = async () => {
-        setIsHistoryLoading(true);
-        setHistoryError(null);
         try {
-            // Djangoで作成したAPIエンドポイントを呼び出す
-            const apiUrl = `${import.meta.env.VITE_API_URL}/get/history/`;
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error(`HTTPエラー: ${response.status}`);
-            const data: { history: ChatHistoryItem[] } = await response.json();
-            setHistory(data.history); // 取得した履歴をstateに保存
+            setIsLoading(true);
+            const account = accounts[0];
+            const tenantId = account.idTokenClaims?.tid;
+
+            if (!tenantId) {
+                throw new Error("tenantIdがトークンに含まれていません。");
+            }
+
+            const params = new URLSearchParams({ tenant_id: tenantId });
+            const response = await fetch(`/api/checkcount/?${params.toString()}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTPエラー: ${response.status}`);
+            }
+
+            const data: UsageResponse = await response.json();
+            setUsageCount(data);
+            setError(null);
         } catch (e) {
-            if (e instanceof Error) setHistoryError(e.message);
-            else setHistoryError('不明なエラーが発生しました。');
+            const errorMessage = e instanceof Error ? e.message : '不明なエラーが発生しました。';
+            setError(errorMessage);
+            console.error('Failed to fetch usage count:', e);
+        } finally {
+            setIsLoading(false);
+        }
+  }, [accounts]); // accountsが変更されたら関数を再生成
+
+  const fetchHistory = useCallback(async () => {
+        if (accounts.length === 0) {
+            setHistoryError("認証されていません。");
+            setIsHistoryLoading(false);
+            return;
+        }
+
+        try {
+            setIsHistoryLoading(true);
+            const account = accounts[0];
+            const tenantId = account.idTokenClaims?.tid;
+
+            if (!tenantId) {
+                throw new Error("tenantIdがトークンに含まれていません。");
+            }
+
+            const params = new URLSearchParams({ tenant_id: tenantId });
+            const response = await fetch(`/api/get/history/?${params.toString()}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTPエラー: ${response.status}`);
+            }
+
+            const data: { history: ChatHistoryItem[] } = await response.json();
+            setHistory(data.history);
+            setHistoryError(null);
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : '不明なエラーが発生しました。';
+            setHistoryError(errorMessage);
             console.error('Failed to fetch history:', e);
         } finally {
             setIsHistoryLoading(false);
         }
-    };
+  }, [accounts]); // accountsが変更されたら関数を再生成
 
-    fetchUsageCount(); 
-    fetchHistory();
-
-  }, []); 
+    // ★★★★★ 修正点 2 ★★★★★
+    // useEffectを使って、コンポーネントのマウント時やaccountsの変更時にデータを取得します。
+    useEffect(() => {
+        fetchUsageCount();
+        fetchHistory();
+    }, [fetchUsageCount, fetchHistory]); // fetchUsageCountとfetchHistoryが変更されたら実行
   
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const closeMenu = () => {
-    setIsMenuOpen(false);
-  };
+  // --- イベントハンドラ ---
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const closeMenu = () => setIsMenuOpen(false);
 
   // --- 利用回数を表示するためのUI要素 ---
   // 読み込み中、エラー、成功の状態で表示を切り替える
