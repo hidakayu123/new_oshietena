@@ -4,10 +4,11 @@ frontend
 /frontend/*
 /node_modules/*
 /Azure_Function/*
-!/frontend/
-!/frontend/index.tsx
-!/frontend/authConfig.ts
-!/frontend/src/pages/chat
+!frontend/
+!frontend/src/
+!frontend/src/index.tsx
+!frontend/src/authConfig.ts
+!frontend/src/pages/
 /app/__pycache__/*
 /new_oshietena/__pycache__/*
 /__pycache__/*
@@ -15,3 +16,4 @@ frontend
 # Pythonキャッシュファイル
 **/__pycache__/
 */__pycache__/*
+
