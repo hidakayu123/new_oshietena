@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/get/history/', views.get_chat_history, name='get_history'),
     path('api/v1/auth/microsoft/callback/', views.MSALCallbackView.as_view(), name='msal_callback'),
     path('api/csrf-token/', views.get_csrf_token, name='csrf-token'),
+    path('api/login/', views.MSALCallbackView.as_view(), name='msal_callback_login'),
     # path('config', views.get_config, name='config'),
     # path('chat/stream', views.stream_chat_view, name='stream_chat'),
 ]

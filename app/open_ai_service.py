@@ -20,6 +20,7 @@ client = AzureOpenAI(**openai_client_config)
 deployment = DEPLOYMENT
 
 def handle_chatbot_response(messages):
+    print("ここまでは来てる？？？？？？？？？？？？？？")
     kwargs = {
         "messages": messages,
         "model": deployment,
@@ -28,6 +29,11 @@ def handle_chatbot_response(messages):
     }
 
     response = client.chat.completions.create(**kwargs)
+    print("ここは？？？？？？？？？？？？？？")
+    for chunk in response:
+        print(chunk)
+    
+    print("ストリーム終了")
     return response
 
 

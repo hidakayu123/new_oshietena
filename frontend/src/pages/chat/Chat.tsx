@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppAuth } from '../../AuthHandler'; 
+//import { useAppAuth } from '../../AuthHandler'; 
 import { useRef, useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
@@ -40,6 +40,8 @@ import { LoginContext } from "../../loginContext";
 import { LanguagePicker } from "../../i18n/LanguagePicker";
 import { Settings } from "../../components/Settings/Settings";
 import Sidebarmenu from '../../../../static/menu.js';
+import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
+import { useAuthToken } from "../../AuthContext";
 
 const Chat = () => {
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
@@ -100,7 +102,7 @@ const Chat = () => {
 
     const audio = useRef(new Audio()).current;
     const [isPlaying, setIsPlaying] = useState(false);
-
+    const { instance } = useMsal();
     const speechConfig: SpeechConfig = {
         speechUrls,
         setSpeechUrls,
@@ -108,7 +110,7 @@ const Chat = () => {
         isPlaying,
         setIsPlaying
     };
-    const { appToken } = useAppAuth();
+    //const { appToken } = useAppAuth();
 
     // const getConfig = async () => {
     //     configApi().then(config => {
@@ -199,7 +201,8 @@ const Chat = () => {
         return HistoryProviderOptions.None;
     })();
     const historyManager = useHistoryManager(historyProvider);
-
+    const { token } = useAuthToken();
+    console.log("Current token:", token);
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -208,7 +211,7 @@ const Chat = () => {
         setActiveCitation(undefined);
         setActiveAnalysisPanelTab(undefined);
 
-        const token = client ? await getToken(client) : undefined;
+        // const token = client ? await getToken(client) : undefined;
 
         try {
             const messages: ResponseMessage[] = answers.flatMap(a => [
@@ -249,7 +252,13 @@ const Chat = () => {
                 session_state: answers.length ? answers[answers.length - 1][1].session_state : null
             };
 
-            const response = await chatApi(request, appToken);
+            const account = instance.getActiveAccount();
+            if (!account) throw new Error("No active account");
+
+            
+
+            // chatApi呼び出し時にトークンをヘッダーなどに渡す
+            const response = await chatApi(request, token);
             if (!response.body) {
                 throw Error("No response body");
             }

@@ -158,3 +158,10 @@ LOGGING = {
         'level': 'DEBUG', # 全てのレベルのログを表示
     },
 }
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # セッション認証の代わりにJWT認証を使う
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}

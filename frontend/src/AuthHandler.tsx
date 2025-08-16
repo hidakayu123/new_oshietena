@@ -1,108 +1,65 @@
-import React, { useState, useCallback, useEffect, createContext, useContext } from "react";
+// AuthHandler.tsx
+
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import { InteractionStatus } from "@azure/msal-browser";
+import React, { useEffect, useState } from "react";
+import { InteractionRequiredAuthError } from "@azure/msal-browser";
+import { useAuthToken } from "./AuthContext";
+// AppAuthProviderなど、あなたのアプリの状態管理に合わせてください
+// import { useAppAuth } from "./AuthProvider"; 
 
-// --- AppAuthContextとAppAuthProviderは変更なし ---
-interface AppAuthContextType {
-    isSessionReady: boolean;
-    appToken: any | null;
-    login: (token: any) => void;
-}
-
-const AppAuthContext = React.createContext<AppAuthContextType>({
-    isSessionReady: false,
-    appToken: null,
-    login: () => {}
-});
-
-export const useAppAuth = () => React.useContext(AppAuthContext);
-
-export const AppAuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [isSessionReady, setIsSessionReady] = useState(false);
-    const [appToken, setAppToken] = useState<any | null>(null);
-
-    const login = useCallback((token: any) => {
-        setAppToken(token);
-        setIsSessionReady(true);
-    }, []); // 依存配列は空でOK
-    
-    return (
-        <AppAuthContext.Provider value={{ isSessionReady, appToken, login }}>
-            {children}
-        </AppAuthContext.Provider>
-    );
-};
-
-
-// --- ここからが修正対象のコンポーネント ---
 export const AuthHandler = ({ children }: { children: React.ReactNode }) => {
-    const { instance, accounts, inProgress } = useMsal();
+    console.log("🔥🔥🔥 AuthHandler component is rendering! 🔥🔥🔥");
+    const { instance } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const { isSessionReady, login } = useAppAuth();
+    // const { setIsSessionReady } = useAppAuth(); // アプリのセッション準備完了を伝えるための状態更新関数
 
-    console.log("AuthHandler State:", {
-        isAuthenticated,
-        isSessionReady,
-        inProgress
-    });
-
+    const [loginAttempted, setLoginAttempted] = useState(false);
+    const { setToken } = useAuthToken();
     useEffect(() => {
-        if (isAuthenticated && !isSessionReady && inProgress === InteractionStatus.None) {
-            
-            const account = accounts[0];
-            if (!account) return;
-
-            console.log("MSAL authentication successful. Establishing backend session...");
-
-            const idToken = account.idToken;
-            const tenantId = account.idTokenClaims?.tid ?? null;
-            if (!idToken) return;
+        console.log("✅ [AuthHandler Effect] useEffect is running.");
+        // MSALでの認証が成功し、まだバックエンドセッションの確立を試みていない場合
+        if (isAuthenticated && !loginAttempted) {
+            setLoginAttempted(true);
 
             const establishBackendSession = async () => {
                 try {
-                    const response = await fetch(`/api/v1/auth/microsoft/callback/`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ idToken: idToken, tenantId: tenantId })
+                    // 1. MSALからIDトークンを取得（バックエンドへの身分証明書）
+                    const activeAccount = instance.getActiveAccount();
+                    if (!activeAccount) {
+                        throw new Error("No active MSAL account.");
+                    }
+                    const msalTokenResponse = await instance.acquireTokenSilent({
+                        account: activeAccount,
+                        scopes:[import.meta.env.VITE_API_SCOPE_URI] // ログイン時に使用したスコープ
                     });
-                    
-                    // ★★★★★ ここからが重要な修正箇所 ★★★★★
-
-                    // 1. まずレスポンスをテキストとして安全に読み取る
-                    const responseText = await response.text();
-                    
-                    // 2. バックエンドが何を返したかコンソールで確認する
-                    console.log("Backend Raw Response:", responseText);
-
-                    if (!response.ok) {
-                        // 通信自体が失敗した場合
-                        throw new Error(`Backend request failed with status ${response.status}. Response: ${responseText}`);
-                    }
-
-                    // 3. 応答が空でないことを確認してからJSONとして解析する
-                    if (!responseText) {
-                        throw new Error("Backend returned an empty response.");
-                    }
-                    
-                    const data = JSON.parse(responseText);
-                    
-                    console.log("Backend session established:", data);
-                    login(data); 
+                    setToken(msalTokenResponse.accessToken);
+                    console.log("Token set:", msalTokenResponse.accessToken);
+                    console.log("✅ MSALアクセストークンの取得と設定に成功しました。");
 
                 } catch (error) {
-                    // 4. エラーが発生した場合、その内容をコンソールに詳しく表示する
-                    console.error("Failed to establish backend session. See error below:");
-                    console.error(error);
+                    console.error("Failed to establish backend session:", error);
+                    console.error("バックエンドセッションの確立に失敗しました:", error);
+                    // エラーハンドリング（例：エラーページにリダイレクト）
+                    if (error instanceof InteractionRequiredAuthError) {
+                        const tokenResponse = await instance.acquireTokenPopup({
+                        scopes: [import.meta.env.VITE_API_SCOPE_URI], // 必要なスコープ
+                        });
+                        setToken(tokenResponse.accessToken);
+                    } else {
+                        throw error;
+                    }
                 }
             };
 
             establishBackendSession();
+        
         }
-    }, [isAuthenticated, isSessionReady, inProgress, accounts, instance, login]);
-
-    if (isAuthenticated && !isSessionReady) {
-        return <div>セッションを準備しています...</div>;
-    }
+        return () => {
+        // このログが表示されれば、コンポーネントがアンマウントされたことが確定します
+        console.log("❌ [AuthHandler Cleanup] Component is unmounting!");
+    };
+    }, [isAuthenticated, instance, loginAttempted, setToken]);
+//#, setIsSessionReady
 
     return <>{children}</>;
 };

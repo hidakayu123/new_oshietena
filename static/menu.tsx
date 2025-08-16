@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './menu.css';
 import { useMsal } from "@azure/msal-react";
+import { msalInstance } from './msalInstance';
+
 // コンポーネントの型を定義
 type Props = {};
 
 // APIレスポンスの型を定義
 type UsageResponse = {
-  count: number;
+  count?: number | null;
   limit: number;
 };
 
@@ -55,6 +57,7 @@ const SidebarMenu: React.FC<Props> = () => {
             }
 
             const data: UsageResponse = await response.json();
+            console.log('レスポンスのJSONデータ:', data);
             setUsageCount(data);
             setError(null);
         } catch (e) {
@@ -67,39 +70,38 @@ const SidebarMenu: React.FC<Props> = () => {
   }, [accounts]); // accountsが変更されたら関数を再生成
 
   const fetchHistory = useCallback(async () => {
-        if (accounts.length === 0) {
-            setHistoryError("認証されていません。");
-            setIsHistoryLoading(false);
-            return;
-        }
+    if (accounts.length === 0) {
+      setHistoryError("認証されていません。");
+      setIsHistoryLoading(false);
+      return;
+    }
 
-        try {
-            setIsHistoryLoading(true);
-            const account = accounts[0];
-            const tenantId = account.idTokenClaims?.tid;
+    try {
+      setIsHistoryLoading(true);
+      const account = accounts[0];
+      const tenantId = account.idTokenClaims?.tid;
+      if (!tenantId) {
+        throw new Error("tenantIdがトークンに含まれていません。");
+      }
+      const params = new URLSearchParams({ tenant_id: tenantId });
+      const response = await fetch(`/api/get/history/?${params.toString()}`);
 
-            if (!tenantId) {
-                throw new Error("tenantIdがトークンに含まれていません。");
-            }
+      if (!response.ok) {
+        throw new Error(`HTTPエラー: ${response.status}`);
+      }
 
-            const params = new URLSearchParams({ tenant_id: tenantId });
-            const response = await fetch(`/api/get/history/?${params.toString()}`);
+      const data: { history: ChatHistoryItem[] } = await response.json();
+      setHistory(data.history);
+      setHistoryError(null);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : '不明なエラーが発生しました。';
+      setHistoryError(errorMessage);
+      console.error('Failed to fetch history:', e);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, [accounts]);
 
-            if (!response.ok) {
-                throw new Error(`HTTPエラー: ${response.status}`);
-            }
-
-            const data: { history: ChatHistoryItem[] } = await response.json();
-            setHistory(data.history);
-            setHistoryError(null);
-        } catch (e) {
-            const errorMessage = e instanceof Error ? e.message : '不明なエラーが発生しました。';
-            setHistoryError(errorMessage);
-            console.error('Failed to fetch history:', e);
-        } finally {
-            setIsHistoryLoading(false);
-        }
-  }, [accounts]); // accountsが変更されたら関数を再生成
 
     // ★★★★★ 修正点 2 ★★★★★
     // useEffectを使って、コンポーネントのマウント時やaccountsの変更時にデータを取得します。
@@ -115,18 +117,22 @@ const SidebarMenu: React.FC<Props> = () => {
   // --- 利用回数を表示するためのUI要素 ---
   // 読み込み中、エラー、成功の状態で表示を切り替える
   const UsageDisplay = () => {
-    if (isLoading) {
-      return <div className="usage-display loading">利用回数を取得中...</div>;
-    }
-    if (error) {
+    // if (isLoading) {
+    //   return <div className="usage-display loading">利用回数を取得中...</div>;
+    // }
+    // if (error) {
+    //   return <div className="usage-display error">DB未接続</div>;
+    // }
+    if (!usageCount) {
       return <div className="usage-display error">DB未接続</div>;
     }
+    
     if (usageCount) {
       return (
         <div className="usage-display">
           <span>今月の利用回数:</span>
           <strong style={{ marginLeft: '8px' }}>
-            {usageCount.count} / {usageCount.limit}
+            {usageCount.count ?? 0} / {usageCount.limit}
           </strong>
         </div>
       );
@@ -162,14 +168,12 @@ const SidebarMenu: React.FC<Props> = () => {
         <ul className="chat-history">
             {isHistoryLoading ? (
                 <li>読み込み中...</li>
-            ) : historyError ? (
-                <li className="error">履歴の取得に失敗</li>
-            ) : history.length > 0 ? (
-                history.map(item => (
-                    <li key={item.id}>
-                        <a href={`/chat/${item.id}`}>{item.title}</a>
-                    </li>
-                ))
+            ) : Array.isArray(history) && history.length > 0 ? (
+                history.map((item: ChatHistoryItem) => (
+                <li key={item.id}>
+                  <a href={`/chat/${item.id}`}>{item.title}</a>
+                </li>
+              ))
             ) : (
                 <li>チャット履歴はありません</li>
             )}

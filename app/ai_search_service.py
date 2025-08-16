@@ -21,9 +21,9 @@ TARGET_INDEX_COMPANYA = os.environ.get("TARGET_INDEX_COMPANYA")
 TARGET_INDEX_COMPANYB = os.environ.get("TARGET_INDEX_COMPANYB")
 
 GET_COMPANYA = {
-    "index_name": TARGET_INDEX_COMPANYA,
+    "target_index": TARGET_INDEX_COMPANYA,
     "vector_fields": "content_vector",
-    "select_fields": ["title", "content"],
+    "select_fields": ["content"],
 }
 
 GET_COMPANYB = {
@@ -60,10 +60,10 @@ def convert_string_to_vector(string):
         return None
 
 
-def process_vector_search(query, indexname, vector_fields, select_fields):
+def process_vector_search(query, target_index, vector_fields, select_fields):
     search_client = SearchClient(
         endpoint=SEARCH_CLIENT_ENDPOINT,
-        index_name=indexname,
+        index_name=target_index,
         credential=AzureKeyCredential(AZURE_KEY_CREDENTIAL),
     )
 
@@ -81,7 +81,7 @@ def process_vector_search(query, indexname, vector_fields, select_fields):
 
 # 専用プロンプト用ベクトル検索
 def process_target_index(messages, target_index):
-    if target_index == TARGET_INDEX_COMPANYA:
+    if target_index == 'hidakayu':
         return process_vector_search(messages, **GET_COMPANYA)
     elif target_index == TARGET_INDEX_COMPANYB:
         return process_vector_search(messages, **GET_COMPANYB)

@@ -2,19 +2,19 @@ import os
 import datetime
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from azure.cosmos import CosmosClient, exceptions
+from azure.cosmos import CosmosClient, exceptions, PartitionKey
 
 # --- 環境変数からCosmos DBの接続情報を取得 ---
 # .envファイルを使う場合は、python-dotenvライブラリなどで読み込む
 ENDPOINT = os.environ.get("COSMOS_DB_ENDPOINT")
 KEY = os.environ.get("COSMOS_DB_KEY")
-DATABASE_NAME = 'YourDatabaseName'  # 実際のデータベース名に置き換えてください
-CONTAINER_NAME = 'ChatHistory'      # 実際のコンテナ名に置き換えてください
+DATABASE_NAME = os.environ.get("DATABASE_NAME")
+CONTAINER_NAME = os.environ.get("CONTAINER_NAME")
 
 # --- Cosmos DBクライアントの初期化 ---
 # アプリケーション起動時に一度だけ初期化するのが効率的です
 try:
-    client = CosmosClient(ENDPOINT, credential=KEY)
+    client = CosmosClient(ENDPOINT, KEY)
     database = client.get_database_client(DATABASE_NAME)
     container = database.get_container_client(CONTAINER_NAME)
 except Exception as e:
@@ -23,19 +23,13 @@ except Exception as e:
     client = None
 
 
-@login_required # ログイン必須にするデコレータ
 def chatcount(request):
-    """
-    ログインユーザーの当月のチャット利用回数をCosmos DBから取得する
-    """
     if not client:
         # Cosmos DBクライアントの初期化に失敗している場合
         return JsonResponse({"error": "Database connection failed"}, status=500)
 
-    # ユーザー個人のID (例: oidクレーム)
-    user_id = request.user.username      
+    # ユーザー個人のID (例: oidクレーム)   
     tenant_id = request.GET.get('tenant_id')                
-
 
     # --- 2. 当月の開始日と終了日を計算 ---
     today = datetime.date.today()
@@ -53,18 +47,16 @@ def chatcount(request):
         # SQLインジェクションを防ぐため、パラメータ化クエリを使用する
         query = (
             "SELECT VALUE COUNT(1) FROM c "
-            "WHERE c.userId = @user_id "
-            "AND c.tenantId = @tenantId"
+            "WHERE c.tenantId = @tenantId "
             "AND c.createdAt >= @start_date "
             "AND c.createdAt <= @end_date"
         )
 
         # --- パラメータ: @company_idを追加し、日付をISO文字列に変更 ---
         parameters = [
-            {"name": "@user_id", "value": user_id},
             {"name": "@tenantId", "value": tenant_id},
-            {"name": "@start_date", "value": start_of_month_utc},
-            {"name": "@end_date", "value": end_of_period_utc},
+            {"name": "@start_date", "value": start_of_month_utc.isoformat()},
+            {"name": "@end_date", "value": end_of_period_utc.isoformat()},
         ]
 
         # --- クエリの実行: partition_keyを指定して効率化 ---
@@ -80,7 +72,7 @@ def chatcount(request):
         count = items[0] if items else 0
 
         # --- 5. 結果をJSONで返す ---
-        limit_str = os.environ.get("CHAT_USAGE_LIMIT", "100") # デフォルト値を100に設定
+        limit_str = os.environ.get("CHAT_USAGE_LIMIT") # デフォルト値を100に設定
         limit = int(limit_str) # 文字列を数値に変換
         
         response_data = {
@@ -95,5 +87,6 @@ def chatcount(request):
         return JsonResponse({"error": f"Cosmos DB query failed: {e.message}"}, status=500)
     except Exception as e:
         # その他の予期せぬエラー
+        print("API /api/checkcount で予期せぬエラー:", e)
         return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 

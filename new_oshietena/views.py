@@ -136,6 +136,8 @@ def get_signing_key(token):
         raise e
 
 def token_required(view_func):
+    print("OKKOOOOO")
+    print("凸れーた called")
     """
     AuthorizationヘッダーのJWTトークンを検証するカスタムデコレータ
     """
@@ -155,10 +157,9 @@ def token_required(view_func):
         try:
             # 署名検証用の公開鍵を取得
             signing_key = get_signing_key(token)
-
+            
             # JWTトークンをデコードして検証
-            # issuerとaudienceを適切に設定することが重要
-            payload = jwt.decode(
+            jwt.decode(
                 token,
                 signing_key,
                 algorithms=["RS256"],
@@ -166,10 +167,8 @@ def token_required(view_func):
                 issuer=f"https://sts.windows.net/{systena_tenant_id}/" 
             )
             
-            # 検証済みのトークンからユーザーID (oid) を取得
-            user_oid = payload.get("oid")
-            if not user_oid:
-                return JsonResponse({'error': 'oid not found in token'}, status=401)
+            # トークン検証OKならビューを呼ぶ
+            return view_func(request, *args, **kwargs)
 
         except jwt.ExpiredSignatureError:
             return JsonResponse({'error': 'Token has expired'}, status=401)
@@ -178,83 +177,71 @@ def token_required(view_func):
         except Exception as e:
             return JsonResponse({'error': f'An unexpected error occurred: {e}'}, status=500)
 
-        try:
-            # --- トークン検証後にCosmos DBを検索 ---
-            # 信頼できるoidを使ってユーザーを検索
-            query = "SELECT * FROM c WHERE c.id = @id"
-            params = [{"name": "@id", "value": user_oid}]
-            
-            user_items = list(container.query_items(
-                query=query,
-                parameters=params,
-                enable_cross_partition_query=True
-            ))
-
-            if not user_items:
-                return JsonResponse({'error': 'User not found'}, status=404)
-            
-            # requestオブジェクトにユーザー情報を付与してビュー関数に渡す
-            request.user = user_items[0]
-
-        except Exception as e:
-            return JsonResponse({'error': f'Database query failed: {e}'}, status=500)
-
-        return view_func(request, *args, **kwargs)
-
     return _wrapped_view
+
 
 # チャット処理
 @token_required
 def chatbot(request):
+    print("chatbot called")
+    print(f"Request method: {request.method}")
     if request.method == "POST":
         try:
+            print("Inside try block")
             data = json.loads(request.body)
             messages = data.get("messages", [])
             user_id = request.user.username    
+            print(f"user_id: {user_id}")
 
-            # user_id（メールアドレス）から@より前の部分を抽出してtarget_indexとする
             try:
-                # 以下本番用
-                # target_index = user_id.split('@')[0]
-                target_index = "hidakayu"
+                target_index = 'hidakayu'
+                print(f"target_index: {target_index}")
             except IndexError:
-                # @が含まれないなど、予期せぬ形式の場合はそのままuser_idをフォールバックとして使用
                 target_index = user_id
+                return JsonResponse({'error': 'target_index is empty'}, status=400)
 
-            # ユーザーの質問を抽出する
             user_question = ""
-            if isinstance(messages, list): # messagesがリストであることを確認
+            if isinstance(messages, list):
                 for message in messages:
                     if message.get("role") == "user":
                         user_question = message.get("content")
-                        break # ユーザーの質問を見つけたらループを抜ける
+                        break
+
+            print(f"user_question: {user_question}")
 
             if target_index:
+                print("target_index exists, continuing")
                 anser = process_target_index(user_question, target_index)
                 vector_summary = summarize_vector_results(anser)
                 messages.append({
                     "role": "system",
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
+                print("ここまでは来てるよね")
                 response = handle_chatbot_response(messages)
+                if not response:
+                    print("&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+                    return JsonResponse({'error': 'Failed to get chatbot response'}, status=500)
 
-            return StreamingHttpResponse(
-                stream_chatbot_response(messages, response),
-                content_type="text/event-stream",
-            )
+                return StreamingHttpResponse(
+                    stream_chatbot_response(messages, response),
+                    content_type="text/event-stream",
+                )
+            else:
+                print("target_index is empty")
+
         except Exception as e:
-            # エラーメッセージを適切にフォーマットする
+            print(f"Exception: {e}")
             if hasattr(e, "code") and e.code == "content_filter":
                 message = CONTENT_FILTER_ERROR_MESSAGE
             else:
                 message = OTHERS_ERROR_MESSAGE
-            return JsonResponse(
-                {"message": message},
-                status=e.status_code,
-            )
+            return JsonResponse({"message": message}, status=getattr(e, 'status_code', 500))
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 # チャット履歴取得処理
-@login_required
 def get_chat_history(request):
     """
     ログインしているユーザーのチャット履歴を返すAPIビュー。
@@ -264,14 +251,12 @@ def get_chat_history(request):
         return JsonResponse({'error': 'GET method required.'}, status=405)
 
     try:
-        user_id = request.user.username
         tenant_id = request.GET.get('tenant_id')
         
         # サービスレイヤーの関数を呼び出して、ビジネスロジックを実行
-        history_items = fetch_history_for_user(user_id=user_id, tenant_id=tenant_id)
-        print(history_items)
+        history_items = fetch_history_for_user(tenant_id)
         # 成功した結果をJSONで返す
-        return JsonResponse({'history': history_items})
+        return JsonResponse(history_items, safe=False)
 
     except Exception as e:
         # サービスレイヤーで発生したエラーをキャッチして、HTTPエラーとして返す
@@ -279,7 +264,6 @@ def get_chat_history(request):
         return JsonResponse({'error': 'Internal Server Error'}, status=500)
     
 # チャット履歴保存処理
-@login_required
 @csrf_exempt
 def savechat(request):
     """

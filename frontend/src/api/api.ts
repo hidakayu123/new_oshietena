@@ -1,5 +1,6 @@
 const BACKEND_URI = import.meta.env.VITE_BACKEND_URI || "";
-
+import { getToken } from '../authConfig'; 
+import { msalInstance } from '../authConfig';
 import { ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, Config, SimpleAPIResponse, HistoryListApiResponse, HistoryApiResponse } from "./models";
 // import { useLogin, getToken, isUsingAppServicesLogin } from "../authConfig";
 
@@ -42,21 +43,51 @@ import { ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, Config, Simple
 //     return parsedResponse as ChatAppResponse;
 // }
 
-export async function chatApi(request: ChatAppRequest, authToken: string | null): Promise<Response> {
-    let url = `/api/chat/`;
-    // if (shouldStream) {
-    //     url += "/stream";
+/**
+ * DjangoのCSRFトークンをクッキーから取得するためのヘルパー関数
+ * @param name クッキー名（通常は 'csrftoken'）
+ * @returns トークンの文字列、またはnull
+ */
+function getCookie(name: string): string | null {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // 探している名前で始まるクッキーか？ (例: "csrftoken=...")
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+export async function chatApi(request: ChatAppRequest, token: string | null): Promise<Response> {
+    
+    // 1. MSALから認証トークンを取得する
+    // const authToken = localStorage.getItem('accessToken');
+    // if (!authToken) {
+    //     // トークンが取得できない場合は、認証エラーとして処理を中断する
+    //     throw new Error("User is not authenticated. Token could not be retrieved.");
     // }
-    // const headers = await getHeaders(idToken);
-    // const authToken = '...'; // AppAuthProviderなどから取得
+
+    // 2. DjangoのためのCSRFトークンをクッキーから取得する
     const csrfToken = getCookie('csrftoken');
-    return await fetch(url, {
+    //console.log("Found CSRF Token:", csrfToken);
+    const headers = {
+        'Content-Type': 'application/json',
+        //'Authorization': `Bearer ${authToken}`, // この行が重要
+        'X-CSRFToken': csrfToken || '' ,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    // 3. ヘッダー付きでAPI呼び出しを行う
+    return await fetch('/api/chat/', {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            'Authorization': `Bearer ${authToken}`,
-            'X-CSRFToken': csrfToken || ''
-        },
+        // credentials: "include",
+        headers: headers,
         body: JSON.stringify(request)
     });
 }
@@ -246,26 +277,7 @@ export async function saveConversationToDb(data: ConversationData, token: string
     }
 }
 
-/**
- * DjangoのCSRFトークンをクッキーから取得するためのヘルパー関数
- * @param name クッキー名（通常は 'csrftoken'）
- * @returns トークンの文字列、またはnull
- */
-function getCookie(name: string): string | null {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            // 探している名前のクッキーか確認
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
+
 
 /**
  * 認証・CSRF対策済みのPOSTリクエストをバックエンドに送信します。
