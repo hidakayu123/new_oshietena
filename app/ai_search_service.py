@@ -21,7 +21,6 @@ TARGET_INDEX_COMPANYA = os.environ.get("TARGET_INDEX_COMPANYA")
 TARGET_INDEX_COMPANYB = os.environ.get("TARGET_INDEX_COMPANYB")
 
 GET_COMPANYA = {
-    "target_index": TARGET_INDEX_COMPANYA,
     "vector_fields": "content_vector",
     "select_fields": ["content"],
 }
@@ -81,12 +80,12 @@ def process_vector_search(query, target_index, vector_fields, select_fields):
 
 # 専用プロンプト用ベクトル検索
 def process_target_index(messages, target_index):
-    if target_index == 'hidakayu':
-        return process_vector_search(messages, **GET_COMPANYA)
-    elif target_index == TARGET_INDEX_COMPANYB:
-        return process_vector_search(messages, **GET_COMPANYB)
-    else:
-        print("Unknown target_index:", target_index)
+    # if target_index == 'hidakayu':
+        return process_vector_search(messages, target_index, **GET_COMPANYA)
+    # elif target_index == TARGET_INDEX_COMPANYB:
+    #     return process_vector_search(messages, **GET_COMPANYB)
+    # else:
+    #     print("Unknown target_index:", target_index)
 
 # ベクトル検索結果を整える
 def summarize_vector_results(results):

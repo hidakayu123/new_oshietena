@@ -10,7 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 # 認証クラスとサービス関数をインポート
 from .authentication import AzureADJWTAuthentication
 from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
-from app.get_chat_history import fetch_history_for_user
+from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
+from app.ai_search_service import process_target_index, summarize_vector_results
 from app.save_chat import create_new_conversation
 
 # --- APIビュー ---
@@ -23,13 +24,28 @@ class ChatView(APIView):
     def post(self, request, *args, **kwargs):
         try:
             messages = request.data.get("messages", [])
+            target_index = request.auth.get('oid')
             if not messages:
                 return Response({"error": "messages field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-            response_stream = handle_chatbot_response(messages)
+            user_question = ""
+            if isinstance(messages, list): # messagesがリストであることを確認
+                for message in messages:
+                    if message.get("role") == "user":
+                        user_question = message.get("content")
+                        break # ユーザーの質問を見つけたらループを抜ける
 
+            if target_index:
+                anser = process_target_index(user_question, target_index)
+                print(anser)
+                vector_summary = summarize_vector_results(anser)
+                messages.append({
+                    "role": "system",
+                    "content": f"以下は関連情報です:\n{vector_summary}"
+                })
+                response = handle_chatbot_response(messages)
             return StreamingHttpResponse(
-                stream_chatbot_response(messages, response_stream),
+                stream_chatbot_response(messages, response),
                 content_type="text/event-stream",
             )
         except Exception as e:
