@@ -55,7 +55,7 @@ export const requireAccessControl = authSetup.requireAccessControl;
 export const enableUnauthenticatedAccess = authSetup.enableUnauthenticatedAccess;
 export const requireLogin = requireAccessControl && !enableUnauthenticatedAccess;
 export const loginRequest = {
-    scopes: ["User.Read", import.meta.env.VITE_API_SCOPE_URI] // 既存のスコープに、必要なAPIスコープを追加
+    scopes: [import.meta.env.VITE_API_SCOPE_URI] // 既存のスコープに、必要なAPIスコープを追加
 };
 
 

@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-&h--6d#b@l^4w9)*!q=jsdq12s$k00_70#mwnt+b!&^afsl2m_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
@@ -55,7 +55,6 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -164,4 +163,10 @@ REST_FRAMEWORK = {
         # セッション認証の代わりにJWT認証を使う
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+}
+
+# djangorestframework-simplejwt の設定
+SIMPLE_JWT = {
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
 }

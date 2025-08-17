@@ -18,17 +18,20 @@ from django.contrib import admin
 from django.urls import path
 from new_oshietena import views
 from app.chat_count import chatcount
+from django.urls import path
+from .views import ChatView, ChatHistoryView, auth_setup, get_csrf_token
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
-    path('api/auth_setup/', views.auth_setup, name='auth_setup'),
-    path('api/chat/', views.chatbot, name='chat'),        
+    path('api/auth_setup/', auth_setup, name='auth_setup'),
+    path('api/chat/', ChatView.as_view(), name='chat'),    
     path("api/checkcount/", chatcount, name="checkcount"),
-    path("api/save/history/", views.savechat, name="save_history"),
-    path('api/get/history/', views.get_chat_history, name='get_history'),
-    path('api/v1/auth/microsoft/callback/', views.MSALCallbackView.as_view(), name='msal_callback'),
-    path('api/csrf-token/', views.get_csrf_token, name='csrf-token'),
-    path('api/login/', views.MSALCallbackView.as_view(), name='msal_callback_login'),
+    # path("api/save/history/", views.savechat, name="save_history"),
+    path('api/history/', ChatHistoryView.as_view(), name='chat_history'),
+    # path('api/v1/auth/microsoft/callback/', views.MSALCallbackView.as_view(), name='msal_callback'),
+    # path('api/csrf-token/', views.get_csrf_token, name='csrf-token'),
+    path('api/csrf-token', get_csrf_token, name='get_csrf_token'),
+    # path('api/login/', views.MSALCallbackView.as_view(), name='msal_callback_login'),
     # path('config', views.get_config, name='config'),
     # path('chat/stream', views.stream_chat_view, name='stream_chat'),
 ]

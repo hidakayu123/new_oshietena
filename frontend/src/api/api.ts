@@ -86,7 +86,7 @@ export async function chatApi(request: ChatAppRequest, token: string | null): Pr
     // 3. ヘッダー付きでAPI呼び出しを行う
     return await fetch('/api/chat/', {
         method: "POST",
-        // credentials: "include",
+        credentials: "include",
         headers: headers,
         body: JSON.stringify(request)
     });
@@ -244,7 +244,7 @@ interface ConversationData {
  */
 export async function saveConversationToDb(data: ConversationData, token: string | undefined): Promise<void> {
     // バックエンドに作成したAPIエンドポイントのURL
-    const apiEndpoint = `/api/save/history/`;
+    const apiEndpoint = `/api/history/`;
 
     // 認証トークンがない場合は処理を中断
     if (!token) {
