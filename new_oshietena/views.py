@@ -217,12 +217,11 @@ def chatbot(request):
                     "role": "system",
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
-                print("ここまでは来てるよね")
                 response = handle_chatbot_response(messages)
                 if not response:
-                    print("&&&&&&&&&&&&&&&&&&&&&&&&&&&")
                     return JsonResponse({'error': 'Failed to get chatbot response'}, status=500)
 
+                print(response)
                 return StreamingHttpResponse(
                     stream_chatbot_response(messages, response),
                     content_type="text/event-stream",

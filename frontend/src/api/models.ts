@@ -71,7 +71,7 @@ export type ChatAppResponseOrError = {
 
 export type ChatAppResponse = {
     message: ResponseMessage;
-    delta: ResponseMessage;
+    delta: ResponseMessage | null;
     context: ResponseContext;
     session_state: any;
 };

@@ -82,7 +82,7 @@ const Chat = () => {
 
     const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
     const [answers, setAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
-    const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
+    // const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
     const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
 
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
@@ -149,48 +149,78 @@ const Chat = () => {
     //     });
     // };
 
-    const handleAsyncRequest = async (question: string, answers: [string, ChatAppResponse][], responseBody: ReadableStream<any>) => {
-        let answer: string = "";
-        let askResponse: ChatAppResponse = {} as ChatAppResponse;
+// const handleAsyncRequest = async (
+//     question: string,
+//     // この 'answers' は、初期値を追加する際にのみ使う
+//     currentAnswers: [string, ChatAppResponse][],
+//     responseBody: ReadableStream<any>
+// ) => {
+//     // 1. ユーザーの質問と、空の回答欄をStateにセットする
+//     const initialResponse: ChatAppResponse = {
+//         message: { content: "", role: "assistant" },
+//         delta: null,
+//         context: {
+//             data_points: [],
+//             followup_questions: [],
+//             thoughts: []
+//         },
+//         session_state: {} // 初期値は空のオブジェクト
+//     };
+//     // ★★★ ここのコメントアウトを解除し、'setAnswers'に統一する ★★★
+//     setAnswers([...currentAnswers, [question, initialResponse]]);
 
-        const updateState = (newContent: string) => {
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    answer += newContent;
-                    const latestResponse: ChatAppResponse = {
-                        ...askResponse,
-                        message: { content: answer, role: askResponse.message.role }
-                    };
-                    setStreamedAnswers([...answers, [question, latestResponse]]);
-                    resolve(null);
-                }, 33);
-            });
-        };
-        try {
-            setIsStreaming(true);
-            for await (const event of readNDJSONStream(responseBody)) {
-                if (event["context"] && event["context"]["data_points"]) {
-                    event["message"] = event["delta"];
-                    askResponse = event as ChatAppResponse;
-                } else if (event["delta"] && event["delta"]["content"]) {
-                    setIsLoading(false);
-                    await updateState(event["delta"]["content"]);
-                } else if (event["context"]) {
-                    // Update context with new keys from latest event
-                    askResponse.context = { ...askResponse.context, ...event["context"] };
-                } else if (event["error"]) {
-                    throw Error(event["error"]);
-                }
-            }
-        } finally {
-            setIsStreaming(false);
-        }
-        const fullResponse: ChatAppResponse = {
-            ...askResponse,
-            message: { content: answer, role: askResponse.message.role }
-        };
-        return fullResponse;
-    };
+//     setIsLoading(false);
+//     setIsStreaming(true);
+
+//     try {
+//         for await (const event of readNDJSONStream(responseBody)) {
+//             // デバッグ用にすべてのイベントをログに出力する
+//             console.log("受信したイベント:", event);
+
+//             // 2. contentチャンクが来た場合
+//             if (event?.delta?.content) {
+//                 // ★★★ ここのコメントアウトを解除し、'setAnswers'に統一する ★★★
+//                 setAnswers(prevAnswers => {
+//                     const newAnswers = [...prevAnswers];
+//                     const lastAnswerPair = newAnswers[newAnswers.length - 1];
+//                     // contentを追記
+//                     lastAnswerPair[1].message.content += event.delta.content;
+//                     return newAnswers;
+//                 });
+//             }
+//             // 3. context情報が来た場合
+//             else if (event?.context) {
+//                 // ★★★ ここのコメントアウトを解除し、'setAnswers'に統一する ★★★
+//                 setAnswers(prevAnswers => {
+//                     const newAnswers = [...prevAnswers];
+//                     const lastAnswerPair = newAnswers[newAnswers.length - 1];
+//                     // contextをマージ
+//                     lastAnswerPair[1].context = { ...lastAnswerPair[1].context, ...event.context };
+//                     return newAnswers;
+//                 });
+//             }
+//             // 4. session_state情報が来た場合（TypeErrorの解決）
+//             else if (event?.session_state) {
+//                  // ★★★ このブロックを追加 ★★★
+//                 setAnswers(prevAnswers => {
+//                     const newAnswers = [...prevAnswers];
+//                     const lastAnswerPair = newAnswers[newAnswers.length - 1];
+//                     const existing_state = lastAnswerPair[1].session_state;
+//                     // 既存のstateがnullの場合も考慮し、安全にマージする
+//                     lastAnswerPair[1].session_state = { ...(existing_state || {}), ...event.session_state };
+//                     return newAnswers;
+//                 });
+//             }
+//             else if (event?.error) {
+//                 throw Error(event.error);
+//             }
+//         }
+//     } catch (e) {
+//         console.error("ストリーム処理中にエラーが発生しました:", e);
+//     } finally {
+//         setIsStreaming(false);
+//     }
+// };
 
     const client = useLogin ? useMsal().instance : undefined;
     const { loggedIn } = useContext(LoginContext);
@@ -206,26 +236,44 @@ const Chat = () => {
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
+        // 1. UI Stateの準備
+        // 画面のローディング状態などをリセット
         error && setError(undefined);
         setIsLoading(true);
         setActiveCitation(undefined);
         setActiveAnalysisPanelTab(undefined);
 
-        // const token = client ? await getToken(client) : undefined;
+        // 最初にユーザーの質問と、空の回答欄をUIに追加する
+        // これにより、ユーザーは即座にフィードバックを得られる
+        const initialResponse: ChatAppResponse = {
+            message: { content: "", role: "assistant" },
+            delta: null,
+            context: { data_points: [], followup_questions: [], thoughts: [] },
+            session_state: {}
+        };
+        // ★Stateを更新する際は、必ず更新用の関数 (setAnswers) を使う
+        setAnswers(prevAnswers => [...prevAnswers, [question, initialResponse]]);
 
         try {
-            const messages: ResponseMessage[] = answers.flatMap(a => [
-                { content: a[0], role: "user" },
-                { content: a[1].message.content, role: "assistant" }
-            ]);
+            // 2. APIリクエストの構築
+            // 認証トークンの取得
+            const token = client ? await getToken(client) : undefined;
+            const account = instance.getActiveAccount();
+            if (!account) {
+                throw new Error("No active account");
+            }
+
+            // 現在の会話履歴からAPI用のメッセージ配列を作成
+            // 注意：setAnswersは非同期のため、ここでは更新前のanswersを使う
+            const history = answers.flatMap(a => [{ content: a[0], role: "user" }, { content: a[1].message.content, role: "assistant" }]);
 
             const request: ChatAppRequest = {
-                messages: [...messages, { content: question, role: "user" }],
+                messages: [...history, { content: question, role: "user" }],
                 context: {
                     overrides: {
-                        prompt_template: promptTemplate.length === 0 ? undefined : promptTemplate,
-                        include_category: includeCategory.length === 0 ? undefined : includeCategory,
-                        exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
+                        prompt_template: promptTemplate || undefined,
+                        include_category: includeCategory || undefined,
+                        exclude_category: excludeCategory || undefined,
                         top: retrieveCount,
                         max_subqueries: maxSubqueryCount,
                         results_merge_strategy: resultsMergeStrategy,
@@ -248,62 +296,126 @@ const Chat = () => {
                         ...(seed !== null ? { seed: seed } : {})
                     }
                 },
-                // AI Chat Protocol: Client must pass on any session state received from the server
                 session_state: answers.length ? answers[answers.length - 1][1].session_state : null
             };
 
-            const account = instance.getActiveAccount();
-            if (!account) throw new Error("No active account");
+            // --- DB保存用の共通関数を定義 ---
+            const saveConversation = async (question: string, answer: ChatAppResponse) => {
+                // session_state がなければ保存しない
+                if (!answer.session_state) return;
 
-            
+                try {
+                    console.log("DBへの会話保存処理を開始します...");
+                    const dbToken = client ? await getToken(client) : undefined;
+                    const userId = client?.getActiveAccount()?.username || "unknown-user";
+                    const activeAccount = client?.getActiveAccount();
+                    const tenantId = activeAccount?.tenantId ?? null;
 
-            // chatApi呼び出し時にトークンをヘッダーなどに渡す
+                    await saveConversationToDb({
+                        userId: userId,
+                        tenantId: tenantId,
+                        conversationId: answer.session_state,
+                        question: question,
+                        answer: answer
+                    }, dbToken);
+
+                    console.log("会話が正常にDBへ保存されました。");
+                } catch (error) {
+                    console.error("DBへの会話保存中にエラーが発生しました:", error);
+                }
+            };
+
+            // 3. API呼び出しとレスポンス処理
             const response = await chatApi(request, token);
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`API error: ${response.status} ${response.statusText} | Body: ${errorBody}`);
+            }
+
             if (!response.body) {
-                throw Error("No response body");
+                throw new Error("Response body is null");
             }
-            if (response.status > 299 || !response.ok) {
-                throw Error(`Request failed with status ${response.status}`);
-            }
-            let parsedResponse: ChatAppResponse;
+
+            let finalAnswer: ChatAppResponse;
 
             if (shouldStream) {
-                parsedResponse = await handleAsyncRequest(question, answers, response.body);
-            } else {
-                console.log(response);
-                parsedResponse = await response.json();
-                if ((parsedResponse as ChatAppResponseOrError).error) {
-                    throw Error((parsedResponse as ChatAppResponseOrError).error);
+                // --- ストリーミング処理 ---
+                setIsStreaming(true);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let partialData = "";
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    partialData += decoder.decode(value, { stream: true });
+                    const dataBlocks = partialData.split("\n\n");
+
+                    for (let i = 0; i < dataBlocks.length - 1; i++) {
+                        const block = dataBlocks[i];
+                        if (block.startsWith("data: ")) {
+                            const jsonString = block.substring(6);
+                            try {
+                                const event = JSON.parse(jsonString);
+                                setAnswers(prevAnswers => {
+                                    const newAnswers = [...prevAnswers];
+                                    const lastAnswer = newAnswers[newAnswers.length - 1][1];
+                                    if (event.content) {
+                                        lastAnswer.message.content += event.content;
+                                    }
+                                    if (event.context) {
+                                        lastAnswer.context = { ...lastAnswer.context, ...event.context };
+                                    }
+                                    if (event.session_state) {
+                                        lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
+                                    }
+                                    return newAnswers;
+                                });
+                            } catch (e) {
+                                console.error("Failed to parse stream data:", jsonString, e);
+                            }
+                        }
+                    }
+                    partialData = dataBlocks[dataBlocks.length - 1];
                 }
-            }
-
-            setAnswers([...answers, [question, parsedResponse]]);
-
-            // DB保存処理
-            if (parsedResponse.session_state) {
-                const dbToken = client ? await getToken(client) : undefined;
-                const userId = client?.getActiveAccount()?.username || "unknown-user";
-                const activeAccount = client?.getActiveAccount();
-                const tenantId = activeAccount?.tenantId ?? null;
-                await saveConversationToDb({
-                    userId: userId,
-                    tenantId: tenantId,
-                    conversationId: parsedResponse.session_state,
-                    question: question,
-                    answer: parsedResponse
-                }, dbToken);
-            }
-
-            if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
+                finalAnswer =  { ...initialResponse };
+            } else {
+                // --- 非ストリーミング処理 ---
+                const parsedResponse = await response.json();
+                if (parsedResponse.error) {
+                    throw new Error(parsedResponse.error);
+                }
+                // 最後の回答を、受信した完全なレスポンスで置き換える
+                setAnswers(prevAnswers => {
+                    const newAnswers = [...prevAnswers];
+                    newAnswers[newAnswers.length - 1][1] = parsedResponse;
+                    return newAnswers;
+                });
+                finalAnswer = parsedResponse;
+                if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                 const token = client ? await getToken(client) : undefined;
                 historyManager.addItem(parsedResponse.session_state, [...answers, [question, parsedResponse]], token);
+    };
+                
             }
 
-            setSpeechUrls([...speechUrls, null]);
-                    } catch (e) {
-                        setError(e);
-                    } finally {
-                        setIsLoading(false);
+            await saveConversation(question, finalAnswer);
+        } catch (e) {
+        // 4. エラーハンドリング
+            const err = e as Error;
+            setError(err);
+            // エラーが発生した場合、最後の回答欄にエラーメッセージを表示する
+            setAnswers(prevAnswers => {
+                const newAnswers = [...prevAnswers];
+                newAnswers[newAnswers.length - 1][1].message.content = "エラーが発生しました: " + err.message;
+                return newAnswers;
+            });
+        } finally {
+            // 5. 最終処理
+            setIsLoading(false);
+            setIsStreaming(false);
         }
     };
 
@@ -314,13 +426,13 @@ const Chat = () => {
         setActiveAnalysisPanelTab(undefined);
         setAnswers([]);
         setSpeechUrls([]);
-        setStreamedAnswers([]);
+        // setStreamedAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
     };
 
     useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" }), [isLoading]);
-    useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "auto" }), [streamedAnswers]);
+    // useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "auto" }), [streamedAnswers]);
     // useEffect(() => {
     //     getConfig();
     // }, []);
@@ -458,7 +570,7 @@ const Chat = () => {
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
-                            {isStreaming &&
+                            {/* {isStreaming &&
                                 streamedAnswers.map((streamedAnswer, index) => (
                                     <div key={index}>
                                         <UserChatMessage message={streamedAnswer[0]} />
@@ -480,7 +592,7 @@ const Chat = () => {
                                             />
                                         </div>
                                     </div>
-                                ))}
+                                ))} */}
                             {!isStreaming &&
                                 answers.map((answer, index) => (
                                     <div key={index}>

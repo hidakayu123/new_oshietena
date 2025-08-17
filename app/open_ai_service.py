@@ -20,7 +20,6 @@ client = AzureOpenAI(**openai_client_config)
 deployment = DEPLOYMENT
 
 def handle_chatbot_response(messages):
-    print("ここまでは来てる？？？？？？？？？？？？？？")
     kwargs = {
         "messages": messages,
         "model": deployment,
@@ -29,34 +28,66 @@ def handle_chatbot_response(messages):
     }
 
     response = client.chat.completions.create(**kwargs)
-    print("ここは？？？？？？？？？？？？？？")
-    for chunk in response:
-        print(chunk)
+    # for chunk in response:
+    #     print(chunk)
     
     print("ストリーム終了")
     return response
 
 
+# def stream_chatbot_response(messages, response):
+#     print("これ来てる？")
+#     # ストリーミングされる各データチャンクを処理
+#     for chunk in response:
+#         print("ループ内で受信したチャンク:", chunk)
+#         # チャンクに有効なデータがあるかチェック
+#         if not (chunk.choices and chunk.choices[0].delta):
+#             continue
+
+#         delta = chunk.choices[0].delta
+#         finish_reason = chunk.choices[0].finish_reason
+
+#         # 1. ストリームが終了した場合
+#         if finish_reason:
+#             print("これが最後のチャンクです:", chunk) 
+#             # 最終的なメッセージリストを送信し、終了イベントを通知
+#             yield f"data: {json.dumps({'messages': messages}, ensure_ascii=False)}\n\n"
+#             yield "event: end\n\n"
+#             return  # 関数の実行をここで終了
+
+#         # 2. 通常のテキストコンテンツがある場合
+#         if delta.content:
+#             content = delta.content
+#             # フロントエンドにテキストデータをストリーミング
+#             data = {"content": content}
+#             yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+#             # あなたのPythonのストリーミング用関数
+
 def stream_chatbot_response(messages, response):
-    # ストリーミングされる各データチャンクを処理
-    for chunk in response:
-        # チャンクに有効なデータがあるかチェック
-        if not (chunk.choices and chunk.choices[0].delta):
-            continue
+    print("【Python】1. stream_chatbot_response 関数が開始されました") # ★追加
+    try:
+        chunk_count = 0
+        for chunk in response:
+            chunk_count += 1
+            print(f"【Python】2. LLMからのチャンクを受信しました ({chunk_count}回目)") # ★追加
 
-        delta = chunk.choices[0].delta
-        finish_reason = chunk.choices[0].finish_reason
+            if not (chunk.choices and chunk.choices[0].delta):
+                print("【Python】警告: 無効なチャンクです。スキップします。") # ★追加
+                continue
 
-        # 1. ストリームが終了した場合
-        if finish_reason:
-            # 最終的なメッセージリストを送信し、終了イベントを通知
-            yield f"data: {json.dumps({'messages': messages}, ensure_ascii=False)}\n\n"
-            yield "event: end\n\n"
-            return  # 関数の実行をここで終了
+            delta = chunk.choices[0].delta
+            
+            if delta.content:
+                print(f"【Python】3. contentをyieldします: '{delta.content}'") # ★追加
+                data = {"content": delta.content}
+                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+            
+            # (finish_reasonの処理などは省略)
 
-        # 2. 通常のテキストコンテンツがある場合
-        if delta.content:
-            content = delta.content
-            # フロントエンドにテキストデータをストリーミング
-            data = {"content": content}
-            yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+        print(f"【Python】4. ループが正常に終了しました。総チャンク数: {chunk_count}") # ★追加
+
+    except Exception as e:
+        print(f"【Python】エラー: ストリーム処理中に例外が発生しました: {e}") # ★追加
+        # エラー発生をフロントに通知するのも有効
+        yield f'data: {json.dumps({"error": "An error occurred on the server."})}\n\n'
