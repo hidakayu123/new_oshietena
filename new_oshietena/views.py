@@ -13,6 +13,9 @@ from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
 from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
 from app.ai_search_service import process_target_index, summarize_vector_results
 from app.save_chat import create_new_conversation
+from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
+
+import traceback
 
 # --- APIビュー ---
 
@@ -58,14 +61,42 @@ class ChatHistoryView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            tenant_id = request.user.username.split('@')[1] if '@' in request.user.username else None
-            history_items = fetch_history_for_user(tenant_id)
-            return Response(history_items, status=status.HTTP_200_OK)
+            user_id = request.user.username
+            chat_id = kwargs.get('chat_id')  # ← ここでURLのidパラメータを取得
+            print(f"🧩 tenant_id: {user_id}, chat_id: {chat_id}")
+
+
+            if chat_id:
+                # 個別チャット取得
+                item = fetch_single_chat_by_id(user_id, chat_id)
+                print("📦 item from Cosmos:", item)
+                if item:
+                    if "chatHistory" not in item:
+                        item["chatHistory"] = [{
+                            "user": item.get("question", ""),
+                            "gpt": item.get("answer", "")
+                        }]
+                        print("✅ chatHistory を追加:", item["chatHistory"])
+                    return Response(item, status=status.HTTP_200_OK)
+                else:
+                    print("❌ チャット取得失敗: item is None")
+                    return Response({"error": "指定されたチャットは見つかりませんでした"}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                print("❗ chat_id パラメータが存在しません")
+                # 履歴全件取得（従来どおり）
+                history_items = fetch_history_for_user(user_id)
+                return Response(history_items, status=status.HTTP_200_OK)
         except Exception as e:
+            print("🔥 get() で例外:", e)
+            traceback.print_exc()
             return Response({"error": f"Failed to fetch history: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request, *args, **kwargs):
         try:
+            print("🔥 POST /api/history/ called")
+            print("request.user:", request.user)
+            print("request.user.username:", getattr(request.user, "username", "N/A"))
+            print("request.data:", request.data)
             data = request.data
             user_id = request.user.username
             tenant_id = user_id.split('@')[1] if '@' in user_id else None
@@ -84,6 +115,8 @@ class ChatHistoryView(APIView):
             )
             return Response(created_item, status=status.HTTP_201_CREATED)
         except Exception as e:
+            print("🔥 Error in ChatHistoryView.post():", e)
+            traceback.print_exc()
             return Response({"error": f"Failed to save chat: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # --- フロントエンド設定用のビュー（認証不要） ---

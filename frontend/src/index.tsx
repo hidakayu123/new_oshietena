@@ -16,31 +16,43 @@ import i18next from "./i18n/config";
 import { AuthHandler } from "./AuthHandler";
 import { msalInstance, loginRequest } from './authConfig';
 import { AuthProvider } from './AuthContext';
+import ChatWrapper from "./ChatWrapper";
 
 // ルーターの定義
 const router = createHashRouter([
-    {
-        path: "/",
+  {
+    path: "/",
+    element: (
+      <MsalAuthenticationTemplate
+        interactionType={InteractionType.Redirect}
+        authenticationRequest={loginRequest}
+      >
+        <LayoutWrapper />
+      </MsalAuthenticationTemplate>
+    ),
+    children: [
+      {
+        index: true,
         element: (
-            <MsalAuthenticationTemplate
-                interactionType={InteractionType.Redirect}
-                authenticationRequest={loginRequest}
-            >
-            {/* //     <AuthHandler> */}
-                    <LayoutWrapper />
-            {/* //     </AuthHandler> */}
-            </MsalAuthenticationTemplate>
+          <AuthHandler>
+            <Chat />
+          </AuthHandler>
         ),
-        children: [
-            // ... (childrenの定義は変更なし)
-            { index: true, 
-              element: <AuthHandler>
-                        <Chat />
-                       </AuthHandler> },
-            { path: "qa", lazy: () => import("./pages/ask/Ask") },
-            { path: "*", lazy: () => import("./pages/NoPage") }
-        ]
-    }
+      },
+    //   { path: "qa", lazy: () => import("./pages/ask/Ask") },
+    //   { path: "*", lazy: () => import("./pages/NoPage") },
+    ],
+  },
+
+  // ✅ ChatWrapper を個別のルートで追加
+  {
+    path: "chat/:id",
+    element: (
+      <AuthHandler>
+        <ChatWrapper />
+      </AuthHandler>
+    ),
+  },
 ]);
 
 // ★★★ 修正点 ★★★

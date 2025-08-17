@@ -260,3 +260,31 @@
   color: #666;
   margin: 0;
 }
+
+.chat-history li {
+  border-bottom: 1px solid #ccc; /* 下に薄い線で区切る */
+  padding: 12px 8px;             /* 高さを広げるための余白 */
+  margin: 0;
+  list-style: none;              /* デフォルトのリストマーカーを消す（必要なら） */
+  background-color: #fff;        /* 背景色（必要に応じて） */
+  transition: background-color 0.2s;
+}
+
+.chat-history li:hover {
+  background-color: #f0f0f0;     /* ホバー時に背景色を変えて強調 */
+}
+
+.chat-history-button {
+  all: unset;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  display: block;                /* 全体を押せるように */
+  color: #333;
+  text-align: left;
+}
+

@@ -69,11 +69,19 @@ export type ChatAppResponseOrError = {
     error?: string;
 };
 
+// export type ChatAppResponse = {
+//     message: ResponseMessage;
+//     delta: ResponseMessage | null;
+//     context: ResponseContext;
+//     session_state: any;
+// };
+
+
 export type ChatAppResponse = {
-    message: ResponseMessage;
-    delta: ResponseMessage | null;
-    context: ResponseContext;
-    session_state: any;
+    message: { content: string; role: string; };
+    context: object; // 必要に応じてより詳細な型を定義
+    session_state: object | null;
+    delta: object | null;
 };
 
 export type ChatAppRequestContext = {
@@ -130,4 +138,12 @@ export type HistoryApiResponse = {
     id: string;
     entra_oid: string;
     answers: any;
+};
+
+// DBから返ってくる履歴アイテムの型
+export type HistoryItemFromDb = {
+    id: string;
+    question: string;
+    answer: string;
+    // 他のプロパティ
 };

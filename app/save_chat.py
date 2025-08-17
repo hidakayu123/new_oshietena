@@ -5,7 +5,7 @@ from azure.cosmos import CosmosClient, exceptions
 import uuid
 # 実際のアプリではPyJWTなどのライブラリを使ってトークンを検証・デコードします
 import jwt 
-from datetime import datetime
+from datetime import datetime, timezone
 
 # --- ここに初期化コードを移動する ---
 ENDPOINT = os.environ.get("COSMOS_DB_ENDPOINT")
@@ -24,6 +24,10 @@ except Exception as e:
 
 
 def create_new_conversation(tenant_id: str, user_id: str, conversation_id: str, question: dict, answer: dict) -> dict:
+    print("🔧 create_new_conversation called")
+    print("tenant_id:", tenant_id)
+    print("user_id:", user_id)
+    print("conversation_id:", conversation_id)
     """
     新しい会話をデータベースに作成します。
     パーティションキーにはテナントIDを使用します。
@@ -51,10 +55,10 @@ def create_new_conversation(tenant_id: str, user_id: str, conversation_id: str, 
         'tenantId': tenant_id,
         # 変更点(2): 誰が質問したか分かるようにuserIdは通常のプロパティとして保持
         'userId': user_id,
-        'title': question.get('content', '新規チャット')[:30],
+        'title': question[:30],
         'question': question,
-        'answer': answer,
-        'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'answer': answer.get("message", {}).get("content", ""),
+        'createdAt': datetime.now(timezone.utc).isoformat(),
         # 変更点(3): データの種類を示すtypeプロパティを追加（推奨）
         'type': 'conversation'
     }
@@ -64,6 +68,7 @@ def create_new_conversation(tenant_id: str, user_id: str, conversation_id: str, 
         created_item = container.create_item(body=new_item)
         return created_item
     except Exception as e:
+        print("❌ Error in create_new_conversation:", e)
         print(f"Database item creation failed: {e}")
         raise
 

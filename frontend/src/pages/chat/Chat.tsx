@@ -42,8 +42,18 @@ import { Settings } from "../../components/Settings/Settings";
 import Sidebarmenu from '../../../../static/menu.js';
 import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
 import { useAuthToken } from "../../AuthContext";
+import { v4 as uuidv4 } from 'uuid';
 
-const Chat = () => {
+interface ChatProps {
+  initialAnswers?: [string, ChatAppResponse][];
+}
+const Chat = ({ initialAnswers }: ChatProps) => {
+    // 3. 受け取ったinitialAnswersをuseStateの初期値として使用します
+    //    もしinitialAnswersがなければ（通常の新規チャットの場合）、空の配列[]が使われます
+    const [answers, setAnswers] = useState(initialAnswers || []);
+    useEffect(() => {
+        console.log("【4. Stateが更新されました】現在のanswers:", answers);
+    }, [answers]);
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
     const [promptTemplate, setPromptTemplate] = useState<string>("");
@@ -81,7 +91,7 @@ const Chat = () => {
     const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
 
     const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
-    const [answers, setAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
+    // const [answers, setAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
     // const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
     const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
 
@@ -110,117 +120,6 @@ const Chat = () => {
         isPlaying,
         setIsPlaying
     };
-    //const { appToken } = useAppAuth();
-
-    // const getConfig = async () => {
-    //     configApi().then(config => {
-    //         setShowGPT4VOptions(config.showGPT4VOptions);
-    //         if (config.showGPT4VOptions) {
-    //             setUseGPT4V(true);
-    //         }
-    //         setUseSemanticRanker(config.showSemanticRankerOption);
-    //         setShowSemanticRankerOption(config.showSemanticRankerOption);
-    //         setUseQueryRewriting(config.showQueryRewritingOption);
-    //         setShowQueryRewritingOption(config.showQueryRewritingOption);
-    //         setShowReasoningEffortOption(config.showReasoningEffortOption);
-    //         setStreamingEnabled(config.streamingEnabled);
-    //         if (!config.streamingEnabled) {
-    //             setShouldStream(false);
-    //         }
-    //         if (config.showReasoningEffortOption) {
-    //             setReasoningEffort(config.defaultReasoningEffort);
-    //         }
-    //         setShowVectorOption(config.showVectorOption);
-    //         if (!config.showVectorOption) {
-    //             setRetrievalMode(RetrievalMode.Text);
-    //         }
-    //         setShowUserUpload(config.showUserUpload);
-    //         setshowLanguagePicker(config.showLanguagePicker);
-    //         setShowSpeechInput(config.showSpeechInput);
-    //         setShowSpeechOutputBrowser(config.showSpeechOutputBrowser);
-    //         setShowSpeechOutputAzure(config.showSpeechOutputAzure);
-    //         setShowChatHistoryBrowser(config.showChatHistoryBrowser);
-    //         setShowChatHistoryCosmos(config.showChatHistoryCosmos);
-    //         setShowAgenticRetrievalOption(config.showAgenticRetrievalOption);
-    //         setUseAgenticRetrieval(config.showAgenticRetrievalOption);
-    //         if (config.showAgenticRetrievalOption) {
-    //             setRetrieveCount(10);
-    //         }
-    //     });
-    // };
-
-// const handleAsyncRequest = async (
-//     question: string,
-//     // この 'answers' は、初期値を追加する際にのみ使う
-//     currentAnswers: [string, ChatAppResponse][],
-//     responseBody: ReadableStream<any>
-// ) => {
-//     // 1. ユーザーの質問と、空の回答欄をStateにセットする
-//     const initialResponse: ChatAppResponse = {
-//         message: { content: "", role: "assistant" },
-//         delta: null,
-//         context: {
-//             data_points: [],
-//             followup_questions: [],
-//             thoughts: []
-//         },
-//         session_state: {} // 初期値は空のオブジェクト
-//     };
-//     // ★★★ ここのコメントアウトを解除し、'setAnswers'に統一する ★★★
-//     setAnswers([...currentAnswers, [question, initialResponse]]);
-
-//     setIsLoading(false);
-//     setIsStreaming(true);
-
-//     try {
-//         for await (const event of readNDJSONStream(responseBody)) {
-//             // デバッグ用にすべてのイベントをログに出力する
-//             console.log("受信したイベント:", event);
-
-//             // 2. contentチャンクが来た場合
-//             if (event?.delta?.content) {
-//                 // ★★★ ここのコメントアウトを解除し、'setAnswers'に統一する ★★★
-//                 setAnswers(prevAnswers => {
-//                     const newAnswers = [...prevAnswers];
-//                     const lastAnswerPair = newAnswers[newAnswers.length - 1];
-//                     // contentを追記
-//                     lastAnswerPair[1].message.content += event.delta.content;
-//                     return newAnswers;
-//                 });
-//             }
-//             // 3. context情報が来た場合
-//             else if (event?.context) {
-//                 // ★★★ ここのコメントアウトを解除し、'setAnswers'に統一する ★★★
-//                 setAnswers(prevAnswers => {
-//                     const newAnswers = [...prevAnswers];
-//                     const lastAnswerPair = newAnswers[newAnswers.length - 1];
-//                     // contextをマージ
-//                     lastAnswerPair[1].context = { ...lastAnswerPair[1].context, ...event.context };
-//                     return newAnswers;
-//                 });
-//             }
-//             // 4. session_state情報が来た場合（TypeErrorの解決）
-//             else if (event?.session_state) {
-//                  // ★★★ このブロックを追加 ★★★
-//                 setAnswers(prevAnswers => {
-//                     const newAnswers = [...prevAnswers];
-//                     const lastAnswerPair = newAnswers[newAnswers.length - 1];
-//                     const existing_state = lastAnswerPair[1].session_state;
-//                     // 既存のstateがnullの場合も考慮し、安全にマージする
-//                     lastAnswerPair[1].session_state = { ...(existing_state || {}), ...event.session_state };
-//                     return newAnswers;
-//                 });
-//             }
-//             else if (event?.error) {
-//                 throw Error(event.error);
-//             }
-//         }
-//     } catch (e) {
-//         console.error("ストリーム処理中にエラーが発生しました:", e);
-//     } finally {
-//         setIsStreaming(false);
-//     }
-// };
 
     const client = useLogin ? useMsal().instance : undefined;
     const { loggedIn } = useContext(LoginContext);
@@ -310,11 +209,12 @@ const Chat = () => {
                     const userId = client?.getActiveAccount()?.username || "unknown-user";
                     const activeAccount = client?.getActiveAccount();
                     const tenantId = activeAccount?.tenantId ?? null;
+                    const conversationId = uuidv4(); 
 
                     await saveConversationToDb({
                         userId: userId,
                         tenantId: tenantId,
-                        conversationId: answer.session_state,
+                        conversationId: conversationId,
                         question: question,
                         answer: answer
                     }, dbToken);
@@ -596,26 +496,26 @@ const Chat = () => {
                             {!isStreaming &&
                                 answers.map((answer, index) => (
                                     <div key={index}>
-                                        <UserChatMessage message={answer[0]} />
-                                        <div className={styles.chatMessageGpt}>
-                                            <Answer
-                                                isStreaming={false}
-                                                key={index}
-                                                answer={answer[1]}
-                                                index={index}
-                                                speechConfig={speechConfig}
-                                                isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
-                                                onCitationClicked={c => onShowCitation(c, index)}
-                                                onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                                onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                                onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                                showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                                showSpeechOutputAzure={showSpeechOutputAzure}
-                                                showSpeechOutputBrowser={showSpeechOutputBrowser}
-                                            />
-                                        </div>
+                                    <UserChatMessage message={answer[0]} />
+                                    <div className={styles.chatMessageGpt}>
+                                        <Answer
+                                            isStreaming={false}
+                                            key={index}
+                                            answer={answer[1]}
+                                            index={index}
+                                            speechConfig={speechConfig}
+                                            isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
+                                            onCitationClicked={c => onShowCitation(c, index)}
+                                            onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
+                                            onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
+                                            onFollowupQuestionClicked={q => makeApiRequest(q)}
+                                            showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
+                                            showSpeechOutputAzure={showSpeechOutputAzure}
+                                            showSpeechOutputBrowser={showSpeechOutputBrowser}
+                                        />
                                     </div>
-                                ))}
+                                </div>
+                            ))}
                             {isLoading && (
                                 <>
                                     <UserChatMessage message={lastQuestionRef.current} />

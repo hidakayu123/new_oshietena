@@ -34,4 +34,5 @@ urlpatterns = [
     # path('api/login/', views.MSALCallbackView.as_view(), name='msal_callback_login'),
     # path('config', views.get_config, name='config'),
     # path('chat/stream', views.stream_chat_view, name='stream_chat'),
+    path('api/history/<str:chat_id>/', ChatHistoryView.as_view(), name='get_single_chat'),
 ]
