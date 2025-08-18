@@ -44,17 +44,37 @@ import { msalInstance  } from '../../authConfig'; // 以前デバッグしたト
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from "react-router-dom";
+import { AssistantResponse, InitialAnswerRaw } from "../../api";
 
 interface ChatProps {
-  initialAnswers?: [string, ChatAppResponse][];
+  initialAnswers?: InitialAnswerRaw[];
 }
 const Chat = ({ initialAnswers }: ChatProps) => {
-    // 3. 受け取ったinitialAnswersをuseStateの初期値として使用します
-    //    もしinitialAnswersがなければ（通常の新規チャットの場合）、空の配列[]が使われます
-    const [answers, setAnswers] = useState(initialAnswers || []);
-    useEffect(() => {
-        console.log("【4. Stateが更新されました】現在のanswers:", answers);
-    }, [answers]);
+        const [answers, setAnswers] = useState<[string, AssistantResponse][]>(() => {
+        // initialAnswersがなければ（新規チャットなら）空の配列で初期化
+        if (!initialAnswers || initialAnswers.length === 0) {
+            return [];
+        }
+
+        // initialAnswers（履歴データ）を、UIが表示できる形式に変換
+        return initialAnswers.map(item => {
+            // 各アイテムを [string, ChatAppResponse] のペア（タプル）に変換
+            return [
+                item.question, // ペアの1つ目：質問 (string)
+                {              // ペアの2つ目：回答 (ChatAppResponseの形式に変換)
+                    message: {
+                        content: item.answer, // 文字列の回答をcontentに設定
+                        role: 'assistant'
+                    },
+                    // その他の必須プロパティにデフォルト値を設定
+                    context: { data_points: [], followup_questions: [], thoughts: [] },
+                    session_state: null,
+                    delta: null
+                }
+            ];
+        });
+    });
+    console.info(answers)
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
     const [promptTemplate, setPromptTemplate] = useState<string>("");
@@ -80,26 +100,19 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
     const [gpt4vInput, setGPT4VInput] = useState<GPT4VInput>(GPT4VInput.TextAndImages);
     const [useGPT4V, setUseGPT4V] = useState<boolean>(false);
-
     const lastQuestionRef = useRef<string>(
         (initialAnswers && initialAnswers.length > 0)
             ? initialAnswers[initialAnswers.length - 1][0]
             : ""
     );
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
-
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
     const [error, setError] = useState<unknown>();
-
     const [activeCitation, setActiveCitation] = useState<string>();
     const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
-
     const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
-    // const [answers, setAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
-    // const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
     const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
-
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
     const [showSemanticRankerOption, setShowSemanticRankerOption] = useState<boolean>(false);
     const [showQueryRewritingOption, setShowQueryRewritingOption] = useState<boolean>(false);
@@ -115,7 +128,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const [showAgenticRetrievalOption, setShowAgenticRetrievalOption] = useState<boolean>(false);
     const [useAgenticRetrieval, setUseAgenticRetrieval] = useState<boolean>(false);
     const navigate = useNavigate();
-
     const audio = useRef(new Audio()).current;
     const [isPlaying, setIsPlaying] = useState(false);
     const { instance } = useMsal();
@@ -126,10 +138,8 @@ const Chat = ({ initialAnswers }: ChatProps) => {
         isPlaying,
         setIsPlaying
     };
-
     const client = useLogin ? useMsal().instance : undefined;
     const { loggedIn } = useContext(LoginContext);
-
     const historyProvider: HistoryProviderOptions = (() => {
         if (useLogin && showChatHistoryCosmos) return HistoryProviderOptions.CosmosDB;
         if (showChatHistoryBrowser) return HistoryProviderOptions.IndexedDB;
@@ -137,8 +147,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     })();
     const historyManager = useHistoryManager(historyProvider);
     const { token } = useAuthToken();
-    console.log("Current token:", token);
-
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -324,7 +332,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
             setIsStreaming(false);
         }
     };
-
     const clearChat = () => {
         lastQuestionRef.current = "";
         error && setError(undefined);
@@ -339,10 +346,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     };
 
     useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" }), [isLoading]);
-    // useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "auto" }), [streamedAnswers]);
-    // useEffect(() => {
-    //     getConfig();
-    // }, []);
 
     const handleSettingsChange = (field: string, value: any) => {
         switch (field) {
@@ -420,7 +423,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const onExampleClicked = (example: string) => {
         makeApiRequest(example);
     };
-
     const onShowCitation = (citation: string, index: number) => {
         if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
             setActiveAnalysisPanelTab(undefined);
@@ -431,7 +433,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
 
         setSelectedAnswer(index);
     };
-
     const onToggleTab = (tab: AnalysisPanelTabs, index: number) => {
         if (activeAnalysisPanelTab === tab && selectedAnswer === index) {
             setActiveAnalysisPanelTab(undefined);
@@ -441,7 +442,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
 
         setSelectedAnswer(index);
     };
-
     const { t, i18n } = useTranslation();
 
     return (
@@ -514,14 +514,9 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                                     </div>
                                 );
                             })}
-                            {/* 重複の原因となっていたisLoadingブロックとerrorブロックは不要になるため削除します。
-                            ストリーミング前の最初のローディング表示は、上記のmap内のロジックで処理されるため、
-                            ここにあったisLoadingブロックは完全に削除して問題ありません。
-                            */}
                             <div ref={chatMessageStreamEnd} />
                         </div>
                     )}
-
                     <div className={styles.chatInput}>
                         <QuestionInput
                             clearOnSend
@@ -532,7 +527,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         />
                     </div>
                 </div>
-
                 {answers.length > 0 && activeAnalysisPanelTab && (
                     <AnalysisPanel
                         className={styles.chatAnalysisPanel}
@@ -543,7 +537,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         activeTab={activeAnalysisPanelTab}
                     />
                 )}
-
                 {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
                     <HistoryPanel
                         provider={historyProvider}
@@ -551,22 +544,11 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         notify={!isStreaming && !isLoading}
                         onClose={() => setIsHistoryPanelOpen(false)}
                         onChatSelected={answers => {
-                            // --- ここからデバッグ用のログ ---
-                            console.log("【履歴クリック】onChatSelectedが呼ばれました。");
-                            console.log("【履歴クリック】受け取った会話データ (answers):", answers);
-
-                            if (!answers || answers.length === 0) {
-                                console.log("【履歴クリック】データが空か未定義のため、処理を中断します。");
-                                return;
-                            }
-                            // --- ここまで ---
-
                             setAnswers(answers);
                             lastQuestionRef.current = answers[answers.length - 1][0];
                         }}
                     />
                 )}
-
                 <Panel
                     headerText={t("labels.headerText")}
                     isOpen={isConfigPanelOpen}

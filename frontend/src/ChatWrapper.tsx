@@ -19,88 +19,62 @@ interface HistoryItemFromDb {
 
 const ChatWrapper = () => {
     const { id } = useParams<{ id: string }>();
-    
     const [initialAnswers, setInitialAnswers] = useState<[string, ChatAppResponse][] | null>(null);
     const [loading, setLoading] = useState(true);
-    const { instance, accounts } = useMsal();
-    const loadedIdRef = useRef<string | undefined>();
+    const { accounts } = useMsal();
+    
 
     useEffect(() => {
-        const fetchChatDetail = async (fetchId: string) => {
+        const fetchChatDetail = async () => {
+            if (!id || accounts.length === 0) {
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
             try {
                 const client = useLogin ? msalInstance : undefined;
                 const token = client ? await getToken(client) : undefined;
                 
-                const response = await fetch(`/api/history/${fetchId}/`, {
+                const response = await fetch(`/api/history/${id}/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
+                console.info(response)
+                // ★★★↓ここからが重要↓★★★
                 if (!response.ok) {
-                    throw new Error(`チャットの取得に失敗しました: ${response.statusText}`);
-                }
-
-                const data: HistoryItemFromDb = await response.json();
-
-                if (data.chatHistory && data.chatHistory.length > 0) {
-                    const formattedAnswers: [string, ChatAppResponse][] = data.chatHistory.map(turn => {
-                        return [
-                            turn.user,
-                            {
-                                message: { content: turn.gpt, role: 'assistant' },
-                                context: {}, session_state: null, delta: null
-                            }
-                        ];
+                    // エラーの場合、レスポンスのボディをテキストとして読み取る
+                    const errorBody = await response.text();
+                    // エラーの詳細をコンソールに出力
+                    console.error("APIエラーの詳細:", {
+                        status: response.status,
+                        statusText: response.statusText,
+                        body: errorBody
                     });
-                    setInitialAnswers(formattedAnswers);
-                } else {
-                    const formattedAnswers: [string, ChatAppResponse][] = [[
-                        data.question,
-                        {
-                            message: { content: data.answer, role: 'assistant' },
-                            context: {}, session_state: null, delta: null
-                        }
-                    ]];
-                    setInitialAnswers(formattedAnswers);
+                    // 読み取ったエラー内容を含めて、より詳細なエラーを投げる
+                    throw new Error(`API returned ${response.status}: ${errorBody}`);
                 }
-                
-                loadedIdRef.current = fetchId;
+                // ★★★↑ここまで↑★★★
 
+                const data = await response.json();
+                setInitialAnswers(data);
+                
             } catch (e) {
-                console.error(e);
+                console.error("fetchChatDetail関数でキャッチした最終的なエラー:", e); // このログも確認
                 setInitialAnswers(null);
             } finally {
                 setLoading(false);
             }
         };
 
-        // URLにIDがない場合 (新規チャット)
-        if (!id) {
-            setInitialAnswers([]);
-            setLoading(false);
-            loadedIdRef.current = undefined; // IDの記憶をリセット
-            return;
-        }
-
-        // --- ★★★ ここが最終修正の核心 ★★★ ---
-        // 既に読み込み済みのIDと同じであれば、何もしない
-        if (loadedIdRef.current === id) {
-            // ただし、ローディング状態は必ずfalseにしておく
-            if (loading) setLoading(false);
-            return;
-        }
-
-        // 新しいIDに切り替わったので、一度Stateをリセットしてローディングを開始する
-        setLoading(true);
-        setInitialAnswers(null); // ← これが調理台を空にする処理
-
-        fetchChatDetail(id);
-
-    }, [id, accounts, loading]); // loadingを依存配列に追加
+        fetchChatDetail();
+    }, [id, accounts]);
 
     if (loading) return <div>読み込み中...</div>;
     
     if (!initialAnswers) return <div>チャットが見つかりません</div>;
-    
+    console.info("履歴表示用", initialAnswers)
+    // key={id} を渡すことで、異なる履歴に切り替わった際にChatコンポーネントを確実に再マウントさせる
     return <Chat key={id} initialAnswers={initialAnswers} />;
 };
 
