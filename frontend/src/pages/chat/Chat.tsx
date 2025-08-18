@@ -43,6 +43,7 @@ import Sidebarmenu from '../../../../static/menu.js';
 import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
+import { useNavigate } from "react-router-dom";
 
 interface ChatProps {
   initialAnswers?: [string, ChatAppResponse][];
@@ -113,6 +114,7 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const [showChatHistoryCosmos, setShowChatHistoryCosmos] = useState<boolean>(false);
     const [showAgenticRetrievalOption, setShowAgenticRetrievalOption] = useState<boolean>(false);
     const [useAgenticRetrieval, setUseAgenticRetrieval] = useState<boolean>(false);
+    const navigate = useNavigate();
 
     const audio = useRef(new Audio()).current;
     const [isPlaying, setIsPlaying] = useState(false);
@@ -302,8 +304,7 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                 const token = client ? await getToken(client) : undefined;
                 historyManager.addItem(parsedResponse.session_state, [...answers, [question, parsedResponse]], token);
-    };
-                
+                };
             }
 
             await saveConversation(question, finalAnswer);
@@ -334,6 +335,7 @@ const Chat = ({ initialAnswers }: ChatProps) => {
         // setStreamedAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
+        navigate("/");
     };
 
     useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" }), [isLoading]);

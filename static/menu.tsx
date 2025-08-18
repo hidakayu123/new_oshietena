@@ -139,6 +139,11 @@ const SidebarMenu: React.FC<Props> = () => {
     );
   };
 
+  const handleNewChat = () => {
+    navigate("/");        // ← ここで新しいチャット画面に遷移
+    setIsMenuOpen(false);     // メニューを閉じる（任意）
+  };
+
   
   // const onSelectChat = async (id: string) => {
   // setSelectedChatId(id);
@@ -185,7 +190,7 @@ const SidebarMenu: React.FC<Props> = () => {
 
       <nav className={`sidebar ${isMenuOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <button className="new-chat-button">＋ 新規チャット開始</button>
+          <button className="new-chat-button" onClick={handleNewChat}>＋ 新規チャット開始</button>
         </div>
 
         <ul className="chat-history">

@@ -82,7 +82,6 @@ class ChatHistoryView(APIView):
                     print("❌ チャット取得失敗: item is None")
                     return Response({"error": "指定されたチャットは見つかりませんでした"}, status=status.HTTP_404_NOT_FOUND)
             else:
-                print("❗ chat_id パラメータが存在しません")
                 # 履歴全件取得（従来どおり）
                 history_items = fetch_history_for_user(user_id)
                 return Response(history_items, status=status.HTTP_200_OK)
