@@ -1,75 +1,107 @@
-// ChatWrapper.tsx
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { getToken, useLogin, msalInstance } from "./authConfig"; // パスは要確認
+import { getToken, useLogin, msalInstance } from "./authConfig";
 import { useMsal } from "@azure/msal-react";
 import Chat from "./pages/chat/Chat";
-import type { ChatAppResponse, HistoryItemFromDb } from "./api/models";
+import type { ChatAppResponse } from "./api/models";
+
+// APIから受け取るデータの型を定義
+interface ChatHistoryTurn {
+    user: string;
+    gpt: string;
+}
+interface HistoryItemFromDb {
+    id: string;
+    question: string;
+    answer: string;
+    chatHistory: ChatHistoryTurn[];
+}
 
 const ChatWrapper = () => {
     const { id } = useParams<{ id: string }>();
-    // Stateの名前を、渡すデータの形式に合わせて変更
+    
     const [initialAnswers, setInitialAnswers] = useState<[string, ChatAppResponse][] | null>(null);
     const [loading, setLoading] = useState(true);
     const { instance, accounts } = useMsal();
+    const loadedIdRef = useRef<string | undefined>();
 
     useEffect(() => {
-        const fetchChatDetail = async () => {
-            if (!id || accounts.length === 0) return;
-
+        const fetchChatDetail = async (fetchId: string) => {
             try {
                 const client = useLogin ? msalInstance : undefined;
                 const token = client ? await getToken(client) : undefined;
                 
-                // APIエンドポイントの末尾にスラッシュを追加
-                const response = await fetch(`/api/history/${id}/`, {
+                const response = await fetch(`/api/history/${fetchId}/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                console.log("【2. 変換処理開始】受け取った生データ:", response);
 
                 if (!response.ok) {
                     throw new Error(`チャットの取得に失敗しました: ${response.statusText}`);
                 }
 
                 const data: HistoryItemFromDb = await response.json();
-                
-                // --- ★★★ ここでデータの「翻訳」を行う ★★★ ---
-                const formattedAnswers: [string, ChatAppResponse][] = [
-                    [
-                        data.question, // ユーザーの質問
-                        { // AIの回答。文字列からオブジェクト形式に変換
-                            message: {
-                                content: data.answer,
-                                role: 'assistant'
-                            },
-                            // 他のプロパティはデフォルト値を設定
-                            context: {}, 
-                            session_state: null,
-                            delta: null
+
+                if (data.chatHistory && data.chatHistory.length > 0) {
+                    const formattedAnswers: [string, ChatAppResponse][] = data.chatHistory.map(turn => {
+                        return [
+                            turn.user,
+                            {
+                                message: { content: turn.gpt, role: 'assistant' },
+                                context: {}, session_state: null, delta: null
+                            }
+                        ];
+                    });
+                    setInitialAnswers(formattedAnswers);
+                } else {
+                    const formattedAnswers: [string, ChatAppResponse][] = [[
+                        data.question,
+                        {
+                            message: { content: data.answer, role: 'assistant' },
+                            context: {}, session_state: null, delta: null
                         }
-                    ]
-                ];
+                    ]];
+                    setInitialAnswers(formattedAnswers);
+                }
                 
-                setInitialAnswers(formattedAnswers);
+                loadedIdRef.current = fetchId;
 
             } catch (e) {
                 console.error(e);
-                setInitialAnswers(null); // エラー時はnullをセット
+                setInitialAnswers(null);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchChatDetail();
-    }, [id, accounts]);
+        // URLにIDがない場合 (新規チャット)
+        if (!id) {
+            setInitialAnswers([]);
+            setLoading(false);
+            loadedIdRef.current = undefined; // IDの記憶をリセット
+            return;
+        }
+
+        // --- ★★★ ここが最終修正の核心 ★★★ ---
+        // 既に読み込み済みのIDと同じであれば、何もしない
+        if (loadedIdRef.current === id) {
+            // ただし、ローディング状態は必ずfalseにしておく
+            if (loading) setLoading(false);
+            return;
+        }
+
+        // 新しいIDに切り替わったので、一度Stateをリセットしてローディングを開始する
+        setLoading(true);
+        setInitialAnswers(null); // ← これが調理台を空にする処理
+
+        fetchChatDetail(id);
+
+    }, [id, accounts, loading]); // loadingを依存配列に追加
 
     if (loading) return <div>読み込み中...</div>;
-    // initialAnswersがnullまたは空配列の場合にエラー表示
-    if (!initialAnswers || initialAnswers.length === 0) return <div>チャットが見つかりません</div>;
-    console.log("【3. 変換後のデータ】UI用の形式:", initialAnswers);
-    // Chatコンポーネントに、初期値として整形済みのデータを渡す
-    return <Chat initialAnswers={initialAnswers} />;
+    
+    if (!initialAnswers) return <div>チャットが見つかりません</div>;
+    
+    return <Chat key={id} initialAnswers={initialAnswers} />;
 };
 
 export default ChatWrapper;

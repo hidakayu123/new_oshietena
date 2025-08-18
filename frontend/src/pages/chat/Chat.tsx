@@ -80,7 +80,11 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const [gpt4vInput, setGPT4VInput] = useState<GPT4VInput>(GPT4VInput.TextAndImages);
     const [useGPT4V, setUseGPT4V] = useState<boolean>(false);
 
-    const lastQuestionRef = useRef<string>("");
+    const lastQuestionRef = useRef<string>(
+        (initialAnswers && initialAnswers.length > 0)
+            ? initialAnswers[initialAnswers.length - 1][0]
+            : ""
+    );
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
 
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -132,6 +136,7 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const historyManager = useHistoryManager(historyProvider);
     const { token } = useAuthToken();
     console.log("Current token:", token);
+
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -337,7 +342,78 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     //     getConfig();
     // }, []);
 
-    // 
+    const handleSettingsChange = (field: string, value: any) => {
+        switch (field) {
+            case "promptTemplate":
+                setPromptTemplate(value);
+                break;
+            case "temperature":
+                setTemperature(value);
+                break;
+            case "seed":
+                setSeed(value);
+                break;
+            case "minimumRerankerScore":
+                setMinimumRerankerScore(value);
+                break;
+            case "minimumSearchScore":
+                setMinimumSearchScore(value);
+                break;
+            case "retrieveCount":
+                setRetrieveCount(value);
+                break;
+            case "maxSubqueryCount":
+                setMaxSubqueryCount(value);
+                break;
+            case "resultsMergeStrategy":
+                setResultsMergeStrategy(value);
+                break;
+            case "useSemanticRanker":
+                setUseSemanticRanker(value);
+                break;
+            case "useQueryRewriting":
+                setUseQueryRewriting(value);
+                break;
+            case "reasoningEffort":
+                setReasoningEffort(value);
+                break;
+            case "useSemanticCaptions":
+                setUseSemanticCaptions(value);
+                break;
+            case "excludeCategory":
+                setExcludeCategory(value);
+                break;
+            case "includeCategory":
+                setIncludeCategory(value);
+                break;
+            case "useOidSecurityFilter":
+                setUseOidSecurityFilter(value);
+                break;
+            case "useGroupsSecurityFilter":
+                setUseGroupsSecurityFilter(value);
+                break;
+            case "shouldStream":
+                setShouldStream(value);
+                break;
+            case "useSuggestFollowupQuestions":
+                setUseSuggestFollowupQuestions(value);
+                break;
+            case "useGPT4V":
+                setUseGPT4V(value);
+                break;
+            case "gpt4vInput":
+                setGPT4VInput(value);
+                break;
+            case "vectorFields":
+                setVectorFields(value);
+                break;
+            case "retrievalMode":
+                setRetrievalMode(value);
+                break;
+            case "useAgenticRetrieval":
+                setUseAgenticRetrieval(value);
+        }
+    };
 
     const onExampleClicked = (example: string) => {
         makeApiRequest(example);
@@ -365,9 +441,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     };
 
     const { t, i18n } = useTranslation();
-
-    console.info("ストリーミング？？？？？？？？？？？？？",answers);
-    console.info("ストリーミング？？？？？？？？？？？？？",isStreaming);
 
     return (
         <div className={styles.container}>
@@ -457,9 +530,94 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         />
                     </div>
                 </div>
+
+                {answers.length > 0 && activeAnalysisPanelTab && (
+                    <AnalysisPanel
+                        className={styles.chatAnalysisPanel}
+                        activeCitation={activeCitation}
+                        onActiveTabChanged={x => onToggleTab(x, selectedAnswer)}
+                        citationHeight="810px"
+                        answer={answers[selectedAnswer][1]}
+                        activeTab={activeAnalysisPanelTab}
+                    />
+                )}
+
+                {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
+                    <HistoryPanel
+                        provider={historyProvider}
+                        isOpen={isHistoryPanelOpen}
+                        notify={!isStreaming && !isLoading}
+                        onClose={() => setIsHistoryPanelOpen(false)}
+                        onChatSelected={answers => {
+                            // --- ここからデバッグ用のログ ---
+                            console.log("【履歴クリック】onChatSelectedが呼ばれました。");
+                            console.log("【履歴クリック】受け取った会話データ (answers):", answers);
+
+                            if (!answers || answers.length === 0) {
+                                console.log("【履歴クリック】データが空か未定義のため、処理を中断します。");
+                                return;
+                            }
+                            // --- ここまで ---
+
+                            setAnswers(answers);
+                            lastQuestionRef.current = answers[answers.length - 1][0];
+                        }}
+                    />
+                )}
+
+                <Panel
+                    headerText={t("labels.headerText")}
+                    isOpen={isConfigPanelOpen}
+                    isBlocking={false}
+                    onDismiss={() => setIsConfigPanelOpen(false)}
+                    closeButtonAriaLabel={t("labels.closeButton")}
+                    onRenderFooterContent={() => <DefaultButton onClick={() => setIsConfigPanelOpen(false)}>{t("labels.closeButton")}</DefaultButton>}
+                    isFooterAtBottom={true}
+                >
+                    <Settings
+                        promptTemplate={promptTemplate}
+                        temperature={temperature}
+                        retrieveCount={retrieveCount}
+                        maxSubqueryCount={maxSubqueryCount}
+                        resultsMergeStrategy={resultsMergeStrategy}
+                        seed={seed}
+                        minimumSearchScore={minimumSearchScore}
+                        minimumRerankerScore={minimumRerankerScore}
+                        useSemanticRanker={useSemanticRanker}
+                        useSemanticCaptions={useSemanticCaptions}
+                        useQueryRewriting={useQueryRewriting}
+                        reasoningEffort={reasoningEffort}
+                        excludeCategory={excludeCategory}
+                        includeCategory={includeCategory}
+                        retrievalMode={retrievalMode}
+                        useGPT4V={useGPT4V}
+                        gpt4vInput={gpt4vInput}
+                        vectorFields={vectorFields}
+                        showSemanticRankerOption={showSemanticRankerOption}
+                        showQueryRewritingOption={showQueryRewritingOption}
+                        showReasoningEffortOption={showReasoningEffortOption}
+                        showGPT4VOptions={showGPT4VOptions}
+                        showVectorOption={showVectorOption}
+                        useOidSecurityFilter={useOidSecurityFilter}
+                        useGroupsSecurityFilter={useGroupsSecurityFilter}
+                        useLogin={!!useLogin}
+                        loggedIn={loggedIn}
+                        requireAccessControl={requireAccessControl}
+                        shouldStream={shouldStream}
+                        streamingEnabled={streamingEnabled}
+                        useSuggestFollowupQuestions={useSuggestFollowupQuestions}
+                        showSuggestFollowupQuestions={true}
+                        showAgenticRetrievalOption={showAgenticRetrievalOption}
+                        useAgenticRetrieval={useAgenticRetrieval}
+                        onChange={handleSettingsChange}
+                    />
+                    {useLogin && <TokenClaimsDisplay />}
+                </Panel>
             </div>
         </div>
     );
 };
 
 export default Chat;
+
+
