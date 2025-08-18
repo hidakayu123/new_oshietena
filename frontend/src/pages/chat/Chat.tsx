@@ -337,78 +337,7 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     //     getConfig();
     // }, []);
 
-    const handleSettingsChange = (field: string, value: any) => {
-        switch (field) {
-            case "promptTemplate":
-                setPromptTemplate(value);
-                break;
-            case "temperature":
-                setTemperature(value);
-                break;
-            case "seed":
-                setSeed(value);
-                break;
-            case "minimumRerankerScore":
-                setMinimumRerankerScore(value);
-                break;
-            case "minimumSearchScore":
-                setMinimumSearchScore(value);
-                break;
-            case "retrieveCount":
-                setRetrieveCount(value);
-                break;
-            case "maxSubqueryCount":
-                setMaxSubqueryCount(value);
-                break;
-            case "resultsMergeStrategy":
-                setResultsMergeStrategy(value);
-                break;
-            case "useSemanticRanker":
-                setUseSemanticRanker(value);
-                break;
-            case "useQueryRewriting":
-                setUseQueryRewriting(value);
-                break;
-            case "reasoningEffort":
-                setReasoningEffort(value);
-                break;
-            case "useSemanticCaptions":
-                setUseSemanticCaptions(value);
-                break;
-            case "excludeCategory":
-                setExcludeCategory(value);
-                break;
-            case "includeCategory":
-                setIncludeCategory(value);
-                break;
-            case "useOidSecurityFilter":
-                setUseOidSecurityFilter(value);
-                break;
-            case "useGroupsSecurityFilter":
-                setUseGroupsSecurityFilter(value);
-                break;
-            case "shouldStream":
-                setShouldStream(value);
-                break;
-            case "useSuggestFollowupQuestions":
-                setUseSuggestFollowupQuestions(value);
-                break;
-            case "useGPT4V":
-                setUseGPT4V(value);
-                break;
-            case "gpt4vInput":
-                setGPT4VInput(value);
-                break;
-            case "vectorFields":
-                setVectorFields(value);
-                break;
-            case "retrievalMode":
-                setRetrievalMode(value);
-                break;
-            case "useAgenticRetrieval":
-                setUseAgenticRetrieval(value);
-        }
-    };
+    // 
 
     const onExampleClicked = (example: string) => {
         makeApiRequest(example);
@@ -436,6 +365,9 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     };
 
     const { t, i18n } = useTranslation();
+
+    console.info("ストリーミング？？？？？？？？？？？？？",answers);
+    console.info("ストリーミング？？？？？？？？？？？？？",isStreaming);
 
     return (
         <div className={styles.container}>
@@ -470,68 +402,47 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
-                            {/* {isStreaming &&
-                                streamedAnswers.map((streamedAnswer, index) => (
+                            {answers.map((answer, index) => {
+                                const isLastAnswer = index === answers.length - 1;
+
+                                return (
                                     <div key={index}>
-                                        <UserChatMessage message={streamedAnswer[0]} />
+                                        <UserChatMessage message={answer[0]} />
                                         <div className={styles.chatMessageGpt}>
-                                            <Answer
-                                                isStreaming={true}
-                                                key={index}
-                                                answer={streamedAnswer[1]}
-                                                index={index}
-                                                speechConfig={speechConfig}
-                                                isSelected={false}
-                                                onCitationClicked={c => onShowCitation(c, index)}
-                                                onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                                onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                                onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                                showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                                showSpeechOutputAzure={showSpeechOutputAzure}
-                                                showSpeechOutputBrowser={showSpeechOutputBrowser}
-                                            />
+                                            {/* 最後の回答欄の表示を、Stateに応じて切り替える */}
+                                            {isLastAnswer && error ? (
+                                                <div className={styles.chatMessageGptMinWidth}>
+                                                    <AnswerError error={error.toString()} onRetry={() => makeApiRequest(lastQuestionRef.current)} />
+                                                </div>
+                                            ) : isLastAnswer && isLoading ? (
+                                                <div className={styles.chatMessageGptMinWidth}>
+                                                    <AnswerLoading />
+                                                </div>
+                                            ) : (
+                                                <Answer
+                                                    isStreaming={isStreaming && isLastAnswer} // ストリーミング中も正しく表示
+                                                    key={index}
+                                                    answer={answer[1]}
+                                                    index={index}
+                                                    speechConfig={speechConfig}
+                                                    isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
+                                                    onCitationClicked={c => onShowCitation(c, index)}
+                                                    onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
+                                                    onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
+                                                    onFollowupQuestionClicked={q => makeApiRequest(q)}
+                                                    showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
+                                                    showSpeechOutputAzure={showSpeechOutputAzure}
+                                                    showSpeechOutputBrowser={showSpeechOutputBrowser}
+                                                />
+                                            )}
                                         </div>
                                     </div>
-                                ))} */}
-                            {!isStreaming &&
-                                answers.map((answer, index) => (
-                                    <div key={index}>
-                                    <UserChatMessage message={answer[0]} />
-                                    <div className={styles.chatMessageGpt}>
-                                        <Answer
-                                            isStreaming={false}
-                                            key={index}
-                                            answer={answer[1]}
-                                            index={index}
-                                            speechConfig={speechConfig}
-                                            isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
-                                            onCitationClicked={c => onShowCitation(c, index)}
-                                            onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                            onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                            onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                            showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                            showSpeechOutputAzure={showSpeechOutputAzure}
-                                            showSpeechOutputBrowser={showSpeechOutputBrowser}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                            {isLoading && (
-                                <>
-                                    <UserChatMessage message={lastQuestionRef.current} />
-                                    <div className={styles.chatMessageGptMinWidth}>
-                                        <AnswerLoading />
-                                    </div>
-                                </>
-                            )}
-                            {error ? (
-                                <>
-                                    <UserChatMessage message={lastQuestionRef.current} />
-                                    <div className={styles.chatMessageGptMinWidth}>
-                                        <AnswerError error={error.toString()} onRetry={() => makeApiRequest(lastQuestionRef.current)} />
-                                    </div>
-                                </>
-                            ) : null}
+                                );
+                            })}
+                            {/* 重複の原因となっていたisLoadingブロックとerrorブロックは不要になるため削除します。
+                            ストリーミング前の最初のローディング表示は、上記のmap内のロジックで処理されるため、
+                            ここにあったisLoadingブロックは完全に削除して問題ありません。
+                            */}
                             <div ref={chatMessageStreamEnd} />
                         </div>
                     )}
@@ -546,80 +457,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         />
                     </div>
                 </div>
-
-                {answers.length > 0 && activeAnalysisPanelTab && (
-                    <AnalysisPanel
-                        className={styles.chatAnalysisPanel}
-                        activeCitation={activeCitation}
-                        onActiveTabChanged={x => onToggleTab(x, selectedAnswer)}
-                        citationHeight="810px"
-                        answer={answers[selectedAnswer][1]}
-                        activeTab={activeAnalysisPanelTab}
-                    />
-                )}
-
-                {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
-                    <HistoryPanel
-                        provider={historyProvider}
-                        isOpen={isHistoryPanelOpen}
-                        notify={!isStreaming && !isLoading}
-                        onClose={() => setIsHistoryPanelOpen(false)}
-                        onChatSelected={answers => {
-                            if (answers.length === 0) return;
-                            setAnswers(answers);
-                            lastQuestionRef.current = answers[answers.length - 1][0];
-                        }}
-                    />
-                )}
-
-                <Panel
-                    headerText={t("labels.headerText")}
-                    isOpen={isConfigPanelOpen}
-                    isBlocking={false}
-                    onDismiss={() => setIsConfigPanelOpen(false)}
-                    closeButtonAriaLabel={t("labels.closeButton")}
-                    onRenderFooterContent={() => <DefaultButton onClick={() => setIsConfigPanelOpen(false)}>{t("labels.closeButton")}</DefaultButton>}
-                    isFooterAtBottom={true}
-                >
-                    <Settings
-                        promptTemplate={promptTemplate}
-                        temperature={temperature}
-                        retrieveCount={retrieveCount}
-                        maxSubqueryCount={maxSubqueryCount}
-                        resultsMergeStrategy={resultsMergeStrategy}
-                        seed={seed}
-                        minimumSearchScore={minimumSearchScore}
-                        minimumRerankerScore={minimumRerankerScore}
-                        useSemanticRanker={useSemanticRanker}
-                        useSemanticCaptions={useSemanticCaptions}
-                        useQueryRewriting={useQueryRewriting}
-                        reasoningEffort={reasoningEffort}
-                        excludeCategory={excludeCategory}
-                        includeCategory={includeCategory}
-                        retrievalMode={retrievalMode}
-                        useGPT4V={useGPT4V}
-                        gpt4vInput={gpt4vInput}
-                        vectorFields={vectorFields}
-                        showSemanticRankerOption={showSemanticRankerOption}
-                        showQueryRewritingOption={showQueryRewritingOption}
-                        showReasoningEffortOption={showReasoningEffortOption}
-                        showGPT4VOptions={showGPT4VOptions}
-                        showVectorOption={showVectorOption}
-                        useOidSecurityFilter={useOidSecurityFilter}
-                        useGroupsSecurityFilter={useGroupsSecurityFilter}
-                        useLogin={!!useLogin}
-                        loggedIn={loggedIn}
-                        requireAccessControl={requireAccessControl}
-                        shouldStream={shouldStream}
-                        streamingEnabled={streamingEnabled}
-                        useSuggestFollowupQuestions={useSuggestFollowupQuestions}
-                        showSuggestFollowupQuestions={true}
-                        showAgenticRetrievalOption={showAgenticRetrievalOption}
-                        useAgenticRetrieval={useAgenticRetrieval}
-                        onChange={handleSettingsChange}
-                    />
-                    {useLogin && <TokenClaimsDisplay />}
-                </Panel>
             </div>
         </div>
     );
