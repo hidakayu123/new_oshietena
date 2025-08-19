@@ -64,36 +64,20 @@ def fetch_history_for_user(user_id: str) -> list:
 
 def fetch_single_chat_by_id(user_id, chat_id):
     try:
-        print("📥 fetch_single_chat_by_id called")
-        print(f"➡️ tenant_id: {user_id}, chat_id: {chat_id}")
-
         client = CosmosClient(ENDPOINT, credential=KEY)
         db = client.get_database_client(DATABASE_NAME)
         container = db.get_container_client(CONTAINER_NAME)
 
-        query = "SELECT * FROM c WHERE c.id = @id AND c.userId = @userId"
-        parameters = [
-            {"name": "@id", "value": chat_id},
-            {"name": "@userId", "value": user_id}
-        ]
-
-        print(f"🔍 Executing query: {query}")
-        print(f"🔸 Parameters: {parameters}")
+        query = "SELECT c.id, c.question, c.answer FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC"
+        parameters = [{"name": "@userId", "value": user_id}]
 
         items = list(container.query_items(
             query=query,
             parameters=parameters,
             enable_cross_partition_query=True
         ))
-
-        print(f"✅ Query returned {len(items)} item(s)")
-
-        if items:
-            print(f"🟢 Found chat with id: {items[0].get('id', 'N/A')}")
-        else:
-            print("⚠️ No chat found matching criteria")
-
-        return items[0] if items else None
+        print(items)
+        return items if items else None
 
     except Exception as e:
         print("🔥 fetch_single_chat_by_id error:", repr(e))

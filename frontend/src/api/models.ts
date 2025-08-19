@@ -76,6 +76,24 @@ export type ChatAppResponseOrError = {
 //     session_state: any;
 // };
 
+export interface AssistantResponse {
+  message: {
+    content: string;
+    role: 'assistant';
+  };
+  context: {
+    data_points: any[];
+    followup_questions: any[];
+    thoughts: any[];
+  };
+  session_state: null;
+  delta: null;
+}
+
+export interface InitialAnswerRaw {
+  question: string;
+  answer: string;
+}
 
 export type ChatAppResponse = {
     message: { content: string; role: string; };
@@ -147,3 +165,8 @@ export type HistoryItemFromDb = {
     answer: string;
     // 他のプロパティ
 };
+
+export interface InitialAnswerRaw {
+    question: string;
+    answer: string;
+}
