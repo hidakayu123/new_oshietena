@@ -39,20 +39,26 @@ const router = createHashRouter([
           </AuthHandler>
         ),
       },
-    //   { path: "qa", lazy: () => import("./pages/ask/Ask") },
-    //   { path: "*", lazy: () => import("./pages/NoPage") },
+      {
+        path: "chat/:id",
+        element: (
+          <AuthHandler>
+            <ChatWrapper />
+          </AuthHandler>
+        ),
+      },
     ],
   },
 
   // ✅ ChatWrapper を個別のルートで追加
-  {
-    path: "chat/:id",
-    element: (
-      <AuthHandler>
-        <ChatWrapper />
-      </AuthHandler>
-    ),
-  },
+//   {
+//     path: "chat/:id",
+//     element: (
+//       <AuthHandler>
+//         <ChatWrapper />
+//       </AuthHandler>
+//     ),
+//   },
 ]);
 
 // ★★★ 修正点 ★★★

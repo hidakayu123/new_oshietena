@@ -50,29 +50,26 @@ interface ChatProps {
   initialAnswers?: InitialAnswerRaw[];
 }
 const Chat = ({ initialAnswers }: ChatProps) => {
-        const [answers, setAnswers] = useState<[string, AssistantResponse][]>(() => {
-        // initialAnswersがなければ（新規チャットなら）空の配列で初期化
-        if (!initialAnswers || initialAnswers.length === 0) {
-            return [];
-        }
-
-        // initialAnswers（履歴データ）を、UIが表示できる形式に変換
-        return initialAnswers.map(item => {
-            // 各アイテムを [string, ChatAppResponse] のペア（タプル）に変換
-            return [
-                item.question, // ペアの1つ目：質問 (string)
-                {              // ペアの2つ目：回答 (ChatAppResponseの形式に変換)
-                    message: {
-                        content: item.answer, // 文字列の回答をcontentに設定
-                        role: 'assistant'
-                    },
-                    // その他の必須プロパティにデフォルト値を設定
+const lastQuestionRef = useRef<string>("");
+const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
+        // もし initialAnswers (履歴データ) が渡されていたら...
+        if (initialAnswers && initialAnswers.length > 0) {
+            // ...それを <Chat> コンポーネントが内部で使う形式 ([string, ChatAppResponse][]) に変換する
+            const transformedHistory = initialAnswers.map(item => {
+                const answerObject: ChatAppResponse = {
+                    message: { content: item.answer, role: 'assistant' },
                     context: { data_points: [], followup_questions: [], thoughts: [] },
                     session_state: null,
                     delta: null
-                }
-            ];
-        });
+                };
+                return [item.question, answerObject]as [string, ChatAppResponse];
+            });
+            lastQuestionRef.current = "履歴取得";
+            return transformedHistory;
+        }
+        
+        // 履歴データがなければ、空の配列で初期化する
+        return [];
     });
     console.info(answers)
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
@@ -100,11 +97,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
     const [gpt4vInput, setGPT4VInput] = useState<GPT4VInput>(GPT4VInput.TextAndImages);
     const [useGPT4V, setUseGPT4V] = useState<boolean>(false);
-    const lastQuestionRef = useRef<string>(
-        (initialAnswers && initialAnswers.length > 0)
-            ? initialAnswers[initialAnswers.length - 1][0]
-            : ""
-    );
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);

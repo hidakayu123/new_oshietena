@@ -165,3 +165,8 @@ export type HistoryItemFromDb = {
     answer: string;
     // 他のプロパティ
 };
+
+export interface InitialAnswerRaw {
+    question: string;
+    answer: string;
+}
