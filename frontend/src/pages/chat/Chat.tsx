@@ -43,17 +43,35 @@ import Sidebarmenu from '../../../../static/menu.js';
 import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
+import { useNavigate } from "react-router-dom";
+import { AssistantResponse, InitialAnswerRaw } from "../../api";
 
 interface ChatProps {
-  initialAnswers?: [string, ChatAppResponse][];
+  initialAnswers?: InitialAnswerRaw[];
 }
 const Chat = ({ initialAnswers }: ChatProps) => {
-    // 3. 受け取ったinitialAnswersをuseStateの初期値として使用します
-    //    もしinitialAnswersがなければ（通常の新規チャットの場合）、空の配列[]が使われます
-    const [answers, setAnswers] = useState(initialAnswers || []);
-    useEffect(() => {
-        console.log("【4. Stateが更新されました】現在のanswers:", answers);
-    }, [answers]);
+const lastQuestionRef = useRef<string>("");
+const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
+        // もし initialAnswers (履歴データ) が渡されていたら...
+        if (initialAnswers && initialAnswers.length > 0) {
+            // ...それを <Chat> コンポーネントが内部で使う形式 ([string, ChatAppResponse][]) に変換する
+            const transformedHistory = initialAnswers.map(item => {
+                const answerObject: ChatAppResponse = {
+                    message: { content: item.answer, role: 'assistant' },
+                    context: { data_points: [], followup_questions: [], thoughts: [] },
+                    session_state: null,
+                    delta: null
+                };
+                return [item.question, answerObject]as [string, ChatAppResponse];
+            });
+            lastQuestionRef.current = "履歴取得";
+            return transformedHistory;
+        }
+        
+        // 履歴データがなければ、空の配列で初期化する
+        return [];
+    });
+    console.info(answers)
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
     const [promptTemplate, setPromptTemplate] = useState<string>("");
@@ -79,22 +97,14 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
     const [gpt4vInput, setGPT4VInput] = useState<GPT4VInput>(GPT4VInput.TextAndImages);
     const [useGPT4V, setUseGPT4V] = useState<boolean>(false);
-
-    const lastQuestionRef = useRef<string>("");
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
-
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
     const [error, setError] = useState<unknown>();
-
     const [activeCitation, setActiveCitation] = useState<string>();
     const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
-
     const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
-    // const [answers, setAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
-    // const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
     const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
-
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
     const [showSemanticRankerOption, setShowSemanticRankerOption] = useState<boolean>(false);
     const [showQueryRewritingOption, setShowQueryRewritingOption] = useState<boolean>(false);
@@ -109,7 +119,7 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const [showChatHistoryCosmos, setShowChatHistoryCosmos] = useState<boolean>(false);
     const [showAgenticRetrievalOption, setShowAgenticRetrievalOption] = useState<boolean>(false);
     const [useAgenticRetrieval, setUseAgenticRetrieval] = useState<boolean>(false);
-
+    const navigate = useNavigate();
     const audio = useRef(new Audio()).current;
     const [isPlaying, setIsPlaying] = useState(false);
     const { instance } = useMsal();
@@ -120,10 +130,8 @@ const Chat = ({ initialAnswers }: ChatProps) => {
         isPlaying,
         setIsPlaying
     };
-
     const client = useLogin ? useMsal().instance : undefined;
     const { loggedIn } = useContext(LoginContext);
-
     const historyProvider: HistoryProviderOptions = (() => {
         if (useLogin && showChatHistoryCosmos) return HistoryProviderOptions.CosmosDB;
         if (showChatHistoryBrowser) return HistoryProviderOptions.IndexedDB;
@@ -131,7 +139,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     })();
     const historyManager = useHistoryManager(historyProvider);
     const { token } = useAuthToken();
-    console.log("Current token:", token);
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -297,8 +304,7 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                 const token = client ? await getToken(client) : undefined;
                 historyManager.addItem(parsedResponse.session_state, [...answers, [question, parsedResponse]], token);
-    };
-                
+                };
             }
 
             await saveConversation(question, finalAnswer);
@@ -318,7 +324,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
             setIsStreaming(false);
         }
     };
-
     const clearChat = () => {
         lastQuestionRef.current = "";
         error && setError(undefined);
@@ -329,13 +334,10 @@ const Chat = ({ initialAnswers }: ChatProps) => {
         // setStreamedAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
+        navigate("/");
     };
 
     useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" }), [isLoading]);
-    // useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "auto" }), [streamedAnswers]);
-    // useEffect(() => {
-    //     getConfig();
-    // }, []);
 
     const handleSettingsChange = (field: string, value: any) => {
         switch (field) {
@@ -413,7 +415,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
     const onExampleClicked = (example: string) => {
         makeApiRequest(example);
     };
-
     const onShowCitation = (citation: string, index: number) => {
         if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
             setActiveAnalysisPanelTab(undefined);
@@ -424,7 +425,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
 
         setSelectedAnswer(index);
     };
-
     const onToggleTab = (tab: AnalysisPanelTabs, index: number) => {
         if (activeAnalysisPanelTab === tab && selectedAnswer === index) {
             setActiveAnalysisPanelTab(undefined);
@@ -434,7 +434,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
 
         setSelectedAnswer(index);
     };
-
     const { t, i18n } = useTranslation();
 
     return (
@@ -470,72 +469,46 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
-                            {/* {isStreaming &&
-                                streamedAnswers.map((streamedAnswer, index) => (
+                            {answers.map((answer, index) => {
+                                const isLastAnswer = index === answers.length - 1;
+
+                                return (
                                     <div key={index}>
-                                        <UserChatMessage message={streamedAnswer[0]} />
+                                        <UserChatMessage message={answer[0]} />
                                         <div className={styles.chatMessageGpt}>
-                                            <Answer
-                                                isStreaming={true}
-                                                key={index}
-                                                answer={streamedAnswer[1]}
-                                                index={index}
-                                                speechConfig={speechConfig}
-                                                isSelected={false}
-                                                onCitationClicked={c => onShowCitation(c, index)}
-                                                onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                                onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                                onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                                showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                                showSpeechOutputAzure={showSpeechOutputAzure}
-                                                showSpeechOutputBrowser={showSpeechOutputBrowser}
-                                            />
+                                            {/* 最後の回答欄の表示を、Stateに応じて切り替える */}
+                                            {isLastAnswer && error ? (
+                                                <div className={styles.chatMessageGptMinWidth}>
+                                                    <AnswerError error={error.toString()} onRetry={() => makeApiRequest(lastQuestionRef.current)} />
+                                                </div>
+                                            ) : isLastAnswer && isLoading ? (
+                                                <div className={styles.chatMessageGptMinWidth}>
+                                                    <AnswerLoading />
+                                                </div>
+                                            ) : (
+                                                <Answer
+                                                    isStreaming={isStreaming && isLastAnswer} // ストリーミング中も正しく表示
+                                                    key={index}
+                                                    answer={answer[1]}
+                                                    index={index}
+                                                    speechConfig={speechConfig}
+                                                    isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
+                                                    onCitationClicked={c => onShowCitation(c, index)}
+                                                    onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
+                                                    onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
+                                                    onFollowupQuestionClicked={q => makeApiRequest(q)}
+                                                    showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
+                                                    showSpeechOutputAzure={showSpeechOutputAzure}
+                                                    showSpeechOutputBrowser={showSpeechOutputBrowser}
+                                                />
+                                            )}
                                         </div>
                                     </div>
-                                ))} */}
-                            {!isStreaming &&
-                                answers.map((answer, index) => (
-                                    <div key={index}>
-                                    <UserChatMessage message={answer[0]} />
-                                    <div className={styles.chatMessageGpt}>
-                                        <Answer
-                                            isStreaming={false}
-                                            key={index}
-                                            answer={answer[1]}
-                                            index={index}
-                                            speechConfig={speechConfig}
-                                            isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
-                                            onCitationClicked={c => onShowCitation(c, index)}
-                                            onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                            onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                            onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                            showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                            showSpeechOutputAzure={showSpeechOutputAzure}
-                                            showSpeechOutputBrowser={showSpeechOutputBrowser}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                            {isLoading && (
-                                <>
-                                    <UserChatMessage message={lastQuestionRef.current} />
-                                    <div className={styles.chatMessageGptMinWidth}>
-                                        <AnswerLoading />
-                                    </div>
-                                </>
-                            )}
-                            {error ? (
-                                <>
-                                    <UserChatMessage message={lastQuestionRef.current} />
-                                    <div className={styles.chatMessageGptMinWidth}>
-                                        <AnswerError error={error.toString()} onRetry={() => makeApiRequest(lastQuestionRef.current)} />
-                                    </div>
-                                </>
-                            ) : null}
+                                );
+                            })}
                             <div ref={chatMessageStreamEnd} />
                         </div>
                     )}
-
                     <div className={styles.chatInput}>
                         <QuestionInput
                             clearOnSend
@@ -546,7 +519,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         />
                     </div>
                 </div>
-
                 {answers.length > 0 && activeAnalysisPanelTab && (
                     <AnalysisPanel
                         className={styles.chatAnalysisPanel}
@@ -557,7 +529,6 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         activeTab={activeAnalysisPanelTab}
                     />
                 )}
-
                 {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
                     <HistoryPanel
                         provider={historyProvider}
@@ -565,13 +536,11 @@ const Chat = ({ initialAnswers }: ChatProps) => {
                         notify={!isStreaming && !isLoading}
                         onClose={() => setIsHistoryPanelOpen(false)}
                         onChatSelected={answers => {
-                            if (answers.length === 0) return;
                             setAnswers(answers);
                             lastQuestionRef.current = answers[answers.length - 1][0];
                         }}
                     />
                 )}
-
                 <Panel
                     headerText={t("labels.headerText")}
                     isOpen={isConfigPanelOpen}
@@ -626,3 +595,5 @@ const Chat = ({ initialAnswers }: ChatProps) => {
 };
 
 export default Chat;
+
+

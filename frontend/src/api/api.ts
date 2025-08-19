@@ -2,46 +2,6 @@ const BACKEND_URI = import.meta.env.VITE_BACKEND_URI || "";
 import { getToken } from '../authConfig'; 
 import { msalInstance } from '../authConfig';
 import { ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, Config, SimpleAPIResponse, HistoryListApiResponse, HistoryApiResponse } from "./models";
-// import { useLogin, getToken, isUsingAppServicesLogin } from "../authConfig";
-
-// export async function getHeaders(idToken: string | undefined): Promise<Record<string, string>> {
-//     // If using login and not using app services, add the id token of the logged in account as the authorization
-//     if (useLogin && !isUsingAppServicesLogin) {
-//         if (idToken) {
-//             return { Authorization: `Bearer ${idToken}` };
-//         }
-//     }
-
-//     return {};
-// }
-
-// export async function configApi(): Promise<Config> {
-//     const response = await fetch(`${BACKEND_URI}/config`, {
-//         method: "GET"
-//     });
-
-//     return (await response.json()) as Config;
-// }
-
-// export async function askApi(request: ChatAppRequest, idToken: string | undefined): Promise<ChatAppResponse> {
-//     const headers = await getHeaders(idToken);
-//     const response = await fetch(`${BACKEND_URI}/ask`, {
-//         method: "POST",
-//         headers: { ...headers, "Content-Type": "application/json" },
-//         body: JSON.stringify(request)
-//     });
-
-//     if (response.status > 299 || !response.ok) {
-//         throw Error(`Request failed with status ${response.status}`);
-//     }
-//     console.log(response);
-//     const parsedResponse: ChatAppResponseOrError = await response.json();
-//     if (parsedResponse.error) {
-//         throw Error(parsedResponse.error);
-//     }
-
-//     return parsedResponse as ChatAppResponse;
-// }
 
 /**
  * DjangoのCSRFトークンをクッキーから取得するためのヘルパー関数
@@ -65,25 +25,14 @@ function getCookie(name: string): string | null {
 }
 
 export async function chatApi(request: ChatAppRequest, token: string | null): Promise<Response> {
-    
-    // 1. MSALから認証トークンを取得する
-    // const authToken = localStorage.getItem('accessToken');
-    // if (!authToken) {
-    //     // トークンが取得できない場合は、認証エラーとして処理を中断する
-    //     throw new Error("User is not authenticated. Token could not be retrieved.");
-    // }
 
-    // 2. DjangoのためのCSRFトークンをクッキーから取得する
     const csrfToken = getCookie('csrftoken');
-    //console.log("Found CSRF Token:", csrfToken);
     const headers = {
         'Content-Type': 'application/json',
-        //'Authorization': `Bearer ${authToken}`, // この行が重要
         'X-CSRFToken': csrfToken || '' ,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
-    // 3. ヘッダー付きでAPI呼び出しを行う
     return await fetch('/api/chat/', {
         method: "POST",
         credentials: "include",

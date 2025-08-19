@@ -48,12 +48,19 @@ const SidebarMenu: React.FC<Props> = () => {
 
     try {
       setIsLoading(true);
-      const tenantId = accounts[0].idTokenClaims?.tid;
+      setIsHistoryLoading(true);
+      const userId = accounts[0].username;
+      const params = new URLSearchParams({ userId });
+      console.log(" ✅✅✅✅✅:✅", params);
+      const dbToken = client ? await getToken(client) : undefined;
 
-      if (!tenantId) throw new Error("tenantIdがトークンに含まれていません。");
-
-      const params = new URLSearchParams({ tenant_id: tenantId });
-      const response = await fetch(`/api/checkcount/?${params}`);
+      const response = await fetch(`/api/checkcount/?${params}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${dbToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) throw new Error(`HTTPエラー: ${response.status}`);
 
@@ -68,6 +75,8 @@ const SidebarMenu: React.FC<Props> = () => {
       setIsLoading(false);
     }
   }, [accounts]);
+
+
 
   // --- 履歴取得 ---
   const fetchHistory = useCallback(async () => {
@@ -109,10 +118,12 @@ const SidebarMenu: React.FC<Props> = () => {
     }
   }, [accounts, client]);
 
-  useEffect(() => {
-    fetchUsageCount();
+  
+    const onHamburgerClick = () => {
+    setIsMenuOpen(!isMenuOpen)
+    fetchUsageCount();  // 非同期関数を呼んでいるだけ（awaitは不要）
     fetchHistory();
-  }, [fetchUsageCount, fetchHistory]);
+  };
 
   // --- 利用回数表示用コンポーネント ---
   const UsageDisplay: React.FC = () => {
@@ -126,6 +137,11 @@ const SidebarMenu: React.FC<Props> = () => {
         </strong>
       </div>
     );
+  };
+
+  const handleNewChat = () => {
+    navigate("/");        // ← ここで新しいチャット画面に遷移
+    setIsMenuOpen(false);     // メニューを閉じる（任意）
   };
 
   
@@ -164,13 +180,17 @@ const SidebarMenu: React.FC<Props> = () => {
     <>
       <div className={`overlay ${isMenuOpen ? 'active' : ''}`} onClick={() => setIsMenuOpen(false)}></div>
 
-      <button className="hamburger-menu" aria-label="メニューを開く" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+      <button 
+        className="hamburger-menu" 
+        aria-label="メニューを開く" 
+        onClick={onHamburgerClick}
+      >
         <span></span><span></span><span></span>
       </button>
 
       <nav className={`sidebar ${isMenuOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <button className="new-chat-button">＋ 新規チャット開始</button>
+          <button className="new-chat-button" onClick={handleNewChat}>＋ 新規チャット開始</button>
         </div>
 
         <ul className="chat-history">

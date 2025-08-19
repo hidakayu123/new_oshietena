@@ -69,20 +69,18 @@ class ChatHistoryView(APIView):
             if chat_id:
                 # 個別チャット取得
                 item = fetch_single_chat_by_id(user_id, chat_id)
-                print("📦 item from Cosmos:", item)
                 if item:
-                    if "chatHistory" not in item:
-                        item["chatHistory"] = [{
-                            "user": item.get("question", ""),
-                            "gpt": item.get("answer", "")
-                        }]
-                        print("✅ chatHistory を追加:", item["chatHistory"])
+                    # if "chatHistory" not in item:
+                    #     item["chatHistory"] = [{
+                    #         "user": item.get("question", ""),
+                    #         "gpt": item.get("answer", "")
+                    #     }]
+                    #     print("✅ chatHistory を追加:", item["chatHistory"])
                     return Response(item, status=status.HTTP_200_OK)
                 else:
                     print("❌ チャット取得失敗: item is None")
                     return Response({"error": "指定されたチャットは見つかりませんでした"}, status=status.HTTP_404_NOT_FOUND)
             else:
-                print("❗ chat_id パラメータが存在しません")
                 # 履歴全件取得（従来どおり）
                 history_items = fetch_history_for_user(user_id)
                 return Response(history_items, status=status.HTTP_200_OK)
