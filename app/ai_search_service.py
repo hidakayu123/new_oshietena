@@ -8,7 +8,7 @@ from azure.search.documents.models import VectorizedQuery
 from openai import AzureOpenAI
 
 # Azure OpenAI Service の設定
-AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_EMBEDDING_ENDPOINT = os.environ.get("AZURE_OPENAI_EMBEDDING_ENDPOINT")
 AZURE_OPENAI_KEY = os.environ.get("AZURE_OPENAI_KEY")
 AZURE_OPENAI_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-01")
 
@@ -34,14 +34,14 @@ GET_COMPANYB = {
 # --- 2. Pythonコード内で「設定辞書」を作成する ---
 
 # AzureOpenAIクライアントを初期化するための設定辞書
-openai_client_config = {
-    "azure_endpoint": AZURE_OPENAI_ENDPOINT,
+openai_embedding_client_config = {
+    "azure_endpoint": AZURE_OPENAI_EMBEDDING_ENDPOINT,
     "api_key": AZURE_OPENAI_KEY,
     "api_version": AZURE_OPENAI_API_VERSION,
 }
 
 def convert_string_to_vector(string):
-    client = AzureOpenAI(**openai_client_config)
+    client = AzureOpenAI(**openai_embedding_client_config)
     tokenizer = tiktoken.get_encoding("cl100k_base")
     tokens = tokenizer.encode(string)
     split_tokens = [tokens[i : i + 8192] for i in range(0, len(tokens), 8192)]
