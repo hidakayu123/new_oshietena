@@ -3,9 +3,6 @@ import json
 import os
 from openai import AzureOpenAI
 from django.http import JsonResponse
-import httpx
-import openai
-
 
 DEPLOYMENT = os.environ.get("DEPLOYMENT")
 # Azure OpenAI Service の設定
@@ -33,11 +30,8 @@ def handle_chatbot_response(messages):
         # "stream": True,   ←ストリーミング回答用
         "temperature": 0,
     }
-
-
     response = client.chat.completions.create(**kwargs)
     return response
-
 #===============================================================================================
 # 以下ストリーミング回答用
 # def stream_chatbot_response(messages, response):

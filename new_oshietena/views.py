@@ -19,17 +19,13 @@ from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
 import traceback
 from django.conf import settings
 ERROR_MESSAGES_PATH = os.path.join(settings.BASE_DIR, "frontend/src/locales/ja/translation.json")
-print(f"✔️ パス確認: {ERROR_MESSAGES_PATH}")
-print(f"📄 存在する？: {os.path.exists(ERROR_MESSAGES_PATH)}")
-# 一度だけ読み込んでグローバルに保持（例外は握りつぶす or ログ出力）
+
 try:
     with open(ERROR_MESSAGES_PATH, "r", encoding="utf-8") as f:
         ERROR_MESSAGES = json.load(f)
 except Exception as e:
-    print(f"⚠️ エラーメッセージの読み込みに失敗しました: {e}")
     ERROR_MESSAGES = {}
 
-# --- APIビュー ---
 
 class ChatView(APIView):
     """チャットのストリーミング応答を処理するビュー"""
@@ -59,7 +55,6 @@ class ChatView(APIView):
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
                 response = handle_chatbot_response(messages)
-
                 content = response.choices[0].message.content
                 return JsonResponse({
                     "message": {
@@ -96,15 +91,11 @@ class ChatView(APIView):
                 )
         # 2. その他の予期せぬエラーを汎用的にキャッチする
         except Exception as e:
-            print(f"❌ 予期せぬ内部エラー: {e}")
-            # JsonResponseで返す場合は ensure_ascii=False を忘れないようにしましょう
             return JsonResponse(
                 {"error": "内部エラー"},
                 status=500,
                 json_dumps_params={'ensure_ascii': False}
             )
-                    
-
         #===============================================================================================
             # 以下ストリーミング回答用
             # return StreamingHttpResponse(
