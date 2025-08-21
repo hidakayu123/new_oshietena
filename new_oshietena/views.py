@@ -122,11 +122,6 @@ class ChatHistoryView(APIView):
                 # 個別チャット取得
                 item = fetch_single_chat_by_id(user_id, chat_id)
                 if item:
-                    # if "chatHistory" not in item:
-                    #     item["chatHistory"] = [{
-                    #         "user": item.get("question", ""),
-                    #         "gpt": item.get("answer", "")
-                    #     }]
                     print("✅ 履歴取得")
                     return Response(item, status=status.HTTP_200_OK)
                 else:
@@ -143,13 +138,7 @@ class ChatHistoryView(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            print("🔥 POST /api/history/ called")
-            print("request.user:", request.user)
-            print("request.user.username:", getattr(request.user, "username", "N/A"))
-            print("request.data:", request.data)
             data = request.data
-            user_id = request.user.username
-            tenant_id = user_id.split('@')[1] if '@' in user_id else None
             
             # 必須データのチェック
             required_fields = ['conversationId', 'question', 'answer']
@@ -157,8 +146,8 @@ class ChatHistoryView(APIView):
                 return Response({'error': 'Missing required data'}, status=status.HTTP_400_BAD_REQUEST)
             
             created_item = create_new_conversation(
-                tenant_id=tenant_id,
-                user_id=user_id,
+                tenant_id=data['tenantId'],
+                user_id=data['userId'],
                 conversation_id=data['conversationId'],
                 question=data['question'],
                 answer=data['answer']

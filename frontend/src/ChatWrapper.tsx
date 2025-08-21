@@ -11,16 +11,6 @@ const ChatWrapper = () => {
     const [loading, setLoading] = useState(true);
     const { accounts } = useMsal();
 
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ★ ここを修正します ★
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★
-    // const fullHash = window.location.hash; // 例: "#/chat/some-conv-id#some-message-id"
-    // const hashParts = fullHash.split('#'); // "#"で文字列を分割
-    
-    // // 分割後の配列の一番最後の要素が目的の「ID」になる
-    // const idFromHash = hashParts.length > 1 ? hashParts[hashParts.length - 1] : null;
-    // const targetId = idFromHash; // デコードは不要
-
     useEffect(() => {
         const fetchChatDetail = async () => {
             if (!id || accounts.length === 0) {

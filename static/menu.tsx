@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './menu.css';
 import { useMsal } from "@azure/msal-react";
 import { getToken, useLogin } from "../frontend/src/authConfig";
-import Chat from "../frontend/src/pages/chat/Chat";
 import { useNavigate } from "react-router-dom"; 
 
 // 型定義

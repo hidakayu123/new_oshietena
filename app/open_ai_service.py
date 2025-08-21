@@ -1,10 +1,9 @@
-import concurrent.futures
-import json
 import os
 from openai import AzureOpenAI
 from django.http import JsonResponse
 
 DEPLOYMENT = os.environ.get("DEPLOYMENT")
+
 # Azure OpenAI Service の設定
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_KEY = os.environ.get("AZURE_OPENAI_KEY")
