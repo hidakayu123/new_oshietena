@@ -47,10 +47,31 @@ class ChatView(APIView):
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
                 response = handle_chatbot_response(messages)
-            return StreamingHttpResponse(
-                stream_chatbot_response(messages, response),
-                content_type="text/event-stream",
-            )
+                content = response.choices[0].message.content
+                return JsonResponse({
+                    "message": {
+                        "content": content,
+                        "role": "assistant"
+                    },
+                    "context": {
+                        "data_points": [],
+                        "followup_questions": [],
+                        "thoughts": []
+                    },
+                    "session_state": "",
+                    "delta": "" 
+                })
+        except Exception as e:
+            print(f"❌ エラー: {e}")
+            return JsonResponse({"error": "内部エラー"}, status=500)
+            #     if response:
+            #         print("✅ 応答:", response)
+            #     else:
+            #         print("❌ 応答の取得に失敗しました")
+            # return StreamingHttpResponse(
+            #     stream_chatbot_response(messages, response.json()),
+            #     content_type="text/event-stream",
+            # )
         except Exception as e:
             return Response({"error": f"Chat processing error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
