@@ -7,10 +7,19 @@ import type { InitialAnswerRaw } from "./api/models"; // 必要な型はこれ�
 
 const ChatWrapper = () => {
     const { id } = useParams<{ id: string }>();
-    // ★ 修正点1: Stateが<Chat>コンポーネントの期待する型を直接持つようにします
     const [initialAnswers, setInitialAnswers] = useState<InitialAnswerRaw[] | null>(null);
     const [loading, setLoading] = useState(true);
     const { accounts } = useMsal();
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★ ここを修正します ★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★
+    // const fullHash = window.location.hash; // 例: "#/chat/some-conv-id#some-message-id"
+    // const hashParts = fullHash.split('#'); // "#"で文字列を分割
+    
+    // // 分割後の配列の一番最後の要素が目的の「ID」になる
+    // const idFromHash = hashParts.length > 1 ? hashParts[hashParts.length - 1] : null;
+    // const targetId = idFromHash; // デコードは不要
 
     useEffect(() => {
         const fetchChatDetail = async () => {
@@ -23,7 +32,7 @@ const ChatWrapper = () => {
             try {
                 const client = useLogin ? msalInstance : undefined;
                 const token = client ? await getToken(client) : undefined;
-                
+
                 const response = await fetch(`/api/history/${id}/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -32,10 +41,10 @@ const ChatWrapper = () => {
                     const errorBody = await response.text();
                     throw new Error(`API returned ${response.status}: ${errorBody}`);
                 }
-               
+
                 const data: InitialAnswerRaw[] = await response.json();
-                setInitialAnswers(data);
-                
+                setInitialAnswers(data.reverse());
+
             } catch (e) {
                 console.error("fetchChatDetailでエラーをキャッチ:", e);
                 setInitialAnswers(null);
@@ -48,11 +57,13 @@ const ChatWrapper = () => {
     }, [id, accounts]);
 
     if (loading) return <div>読み込み中...</div>;
-    
-    if (!initialAnswers) return <div>チャットが見つかりません</div>;
-    console.info("これでチャットに送る", initialAnswers)
 
-    return <Chat key={id} initialAnswers={initialAnswers} />;
+    if (!initialAnswers) return <div>チャットが見つかりません</div>;
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★ ここのpropsも修正します ★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★
+    return <Chat initialAnswers={initialAnswers} targetId={id} />;
 };
 
 export default ChatWrapper;

@@ -13,8 +13,19 @@ type ChatHistoryItem = { id: string; title: string };
 const SidebarMenu: React.FC<Props> = () => {
   const navigate = useNavigate();
   const onSelectChat = (id: string) => {
-    console.log("【1. クリック検知】履歴アイテムがクリックされました:", history);
-    navigate(`/chat/${id}`);
+      // 1. クリックされたIDを元に、history配列から該当するアイテムを探します
+      const clickedItem = history.find(item => item.id === id);
+
+      // 2. アイテムが見つからなかった場合は、念のため処理を中断します
+      if (!clickedItem) {
+          console.error("Clicked history item not found!");
+          return;
+      }
+
+      console.log("【1. クリック検知】クリックされたアイテム:", clickedItem);
+
+      // 3. URLの末尾に「# + 質問のタイトル」を追加してページを移動させます
+      navigate(`/chat/${clickedItem.id}#${clickedItem.id}`);
   };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -35,7 +46,7 @@ const SidebarMenu: React.FC<Props> = () => {
   // あるいは履歴の中に詳細があるならそちらを使う
 
   // 選択時に詳細を取得する例（fetchChatDetailは別途作成する想定）
-  const [selectedChatDetail, setSelectedChatDetail] = useState<ChatDetailType | null>(null);
+  //const [selectedChatDetail, setSelectedChatDetail] = useState<ChatDetailType | null>(null);
   const [isChatLoading, setIsChatLoading] = useState(false);
 
   // --- 利用回数取得 ---
@@ -117,7 +128,6 @@ const SidebarMenu: React.FC<Props> = () => {
       setIsHistoryLoading(false);
     }
   }, [accounts, client]);
-
   
     const onHamburgerClick = () => {
     setIsMenuOpen(!isMenuOpen)

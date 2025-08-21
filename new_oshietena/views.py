@@ -127,7 +127,7 @@ class ChatHistoryView(APIView):
                     #         "user": item.get("question", ""),
                     #         "gpt": item.get("answer", "")
                     #     }]
-                    #     print("✅ chatHistory を追加:", item["chatHistory"])
+                    print("✅ 履歴取得")
                     return Response(item, status=status.HTTP_200_OK)
                 else:
                     print("❌ チャット取得失敗: item is None")

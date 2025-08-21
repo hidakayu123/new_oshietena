@@ -16,9 +16,10 @@ interface Props {
     placeholder?: string;
     clearOnSend?: boolean;
     showSpeechInput?: boolean;
+    chatMessageStreamEnd?: React.RefObject<HTMLDivElement>;
 }
 
-export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, initQuestion, showSpeechInput }: Props) => {
+export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, initQuestion, showSpeechInput, chatMessageStreamEnd }: Props) => {
     const [question, setQuestion] = useState<string>("");
     const { loggedIn } = useContext(LoginContext);
     const { t } = useTranslation();
@@ -38,6 +39,8 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, init
         if (clearOnSend) {
             setQuestion("");
         }
+
+        chatMessageStreamEnd?.current?.scrollIntoView({ behavior: "smooth" });
     };
 
     const onEnterPress = (ev: React.KeyboardEvent<Element>) => {
