@@ -237,7 +237,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
 
             if (!response.ok) {
                 const errorBody = await response.text();
-                throw new Error(`API error: ${response.status} ${response.statusText} | Body: ${errorBody}`);
+                throw new Error(errorBody);
             }
 
             if (!response.body) {
@@ -246,6 +246,8 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
 
             let finalAnswer: ChatAppResponse;
 
+// ===============================================================================================
+//  以下ストリーミング回答用
             // if (shouldStream) {
             //     // --- ストリーミング処理 ---
             //     setIsStreaming(true);
@@ -289,6 +291,8 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
             //     }
             //     finalAnswer =  { ...initialResponse };
             // } else {
+// ===============================================================================================
+
                 // --- 非ストリーミング処理 ---
                 const parsedResponse = await response.json();
                 if (parsedResponse.error) {
@@ -305,7 +309,11 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                 const token = client ? await getToken(client) : undefined;
                 historyManager.addItem(parsedResponse.session_state, [...answers, [question, parsedResponse]], token);
                 };
+
+// ===============================================================================================
+//  以下ストリーミング回答用
             // }
+// ===============================================================================================
 
             await saveConversation(question, finalAnswer);
         } catch (e) {

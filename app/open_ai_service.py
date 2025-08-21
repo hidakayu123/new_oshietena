@@ -4,6 +4,7 @@ import os
 from openai import AzureOpenAI
 from django.http import JsonResponse
 import httpx
+import openai
 
 
 DEPLOYMENT = os.environ.get("DEPLOYMENT")
@@ -29,11 +30,16 @@ def handle_chatbot_response(messages):
         "messages": messages,
         "model": deployment,
         "stream": False,
+        # "stream": True,   ←ストリーミング回答用
         "temperature": 0,
     }
+
+
     response = client.chat.completions.create(**kwargs)
     return response
-    
+
+#===============================================================================================
+# 以下ストリーミング回答用
 # def stream_chatbot_response(messages, response):
 #     print("【Python】1. stream_chatbot_response 関数が開始されました") # ★追加
 #     try:
@@ -61,3 +67,4 @@ def handle_chatbot_response(messages):
 #         print(f"【Python】エラー: ストリーム処理中に例外が発生しました: {e}") # ★追加
 #         # エラー発生をフロントに通知するのも有効
 #         yield f'data: {json.dumps({"error": "An error occurred on the server."})}\n\n'
+#===============================================================================================
