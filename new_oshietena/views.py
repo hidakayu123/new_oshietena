@@ -6,18 +6,26 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+import openai 
+from django.http import HttpResponse
 
 # 認証クラスとサービス関数をインポート
 from .authentication import AzureADJWTAuthentication
-from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
-from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
+from app.open_ai_service import handle_chatbot_response
 from app.ai_search_service import process_target_index, summarize_vector_results
 from app.save_chat import create_new_conversation
 from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
 
 import traceback
+from django.conf import settings
+ERROR_MESSAGES_PATH = os.path.join(settings.BASE_DIR, "frontend/src/locales/ja/translation.json")
 
-# --- APIビュー ---
+try:
+    with open(ERROR_MESSAGES_PATH, "r", encoding="utf-8") as f:
+        ERROR_MESSAGES = json.load(f)
+except Exception as e:
+    ERROR_MESSAGES = {}
+
 
 class ChatView(APIView):
     """チャットのストリーミング応答を処理するビュー"""
@@ -47,12 +55,56 @@ class ChatView(APIView):
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
                 response = handle_chatbot_response(messages)
-            return StreamingHttpResponse(
-                stream_chatbot_response(messages, response),
-                content_type="text/event-stream",
-            )
+                content = response.choices[0].message.content
+                return JsonResponse({
+                    "message": {
+                        "content": content,
+                        "role": "assistant"
+                    },
+                    "context": {
+                        "data_points": [],
+                        "followup_questions": [],
+                        "thoughts": []
+                    },
+                    "session_state": "",
+                    "delta": "" 
+                })
+        # 1. OpenAIのレート制限・クォータ上限エラーを具体的にキャッチする
+        except openai.PermissionDeniedError as e:
+            # メッセージに "quota" という単語が含まれているか確認
+            if "quota" in str(e).lower():
+                print(f"✅ クォータ上限エラー(403)を検出しました: {e}")
+                message = ERROR_MESSAGES.get("rate_limit", "利用回数上限に達しました。")
+                # 画面には「利用回数上限」メッセージを返す
+                return HttpResponse(
+                    message,
+                    status=429, # クライアントには429を返すのが親切
+                    content_type="text/plain; charset=utf-8"
+                )
+            else:
+                # "quota" を含まない、純粋な権限エラーの場合
+                print(f"❌ 権限エラー: {e}")
+                return HttpResponse(
+                    "APIへのアクセス権限がありません。",
+                    status=403,
+                    content_type="text/plain; charset=utf-8"
+                )
+        # 2. その他の予期せぬエラーを汎用的にキャッチする
         except Exception as e:
-            return Response({"error": f"Chat processing error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return JsonResponse(
+                {"error": "内部エラー"},
+                status=500,
+                json_dumps_params={'ensure_ascii': False}
+            )
+        #===============================================================================================
+            # 以下ストリーミング回答用
+            # return StreamingHttpResponse(
+            #     stream_chatbot_response(messages, response.json()),
+            #     content_type="text/event-stream",
+            # )
+        # except Exception as e:
+        #     return Response({"error": f"Chat processing error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        #===============================================================================================
 
 class ChatHistoryView(APIView):
     """チャット履歴の取得と保存を処理するビュー"""
@@ -70,12 +122,7 @@ class ChatHistoryView(APIView):
                 # 個別チャット取得
                 item = fetch_single_chat_by_id(user_id, chat_id)
                 if item:
-                    # if "chatHistory" not in item:
-                    #     item["chatHistory"] = [{
-                    #         "user": item.get("question", ""),
-                    #         "gpt": item.get("answer", "")
-                    #     }]
-                    #     print("✅ chatHistory を追加:", item["chatHistory"])
+                    print("✅ 履歴取得")
                     return Response(item, status=status.HTTP_200_OK)
                 else:
                     print("❌ チャット取得失敗: item is None")
@@ -91,13 +138,7 @@ class ChatHistoryView(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            print("🔥 POST /api/history/ called")
-            print("request.user:", request.user)
-            print("request.user.username:", getattr(request.user, "username", "N/A"))
-            print("request.data:", request.data)
             data = request.data
-            user_id = request.user.username
-            tenant_id = user_id.split('@')[1] if '@' in user_id else None
             
             # 必須データのチェック
             required_fields = ['conversationId', 'question', 'answer']
@@ -105,8 +146,8 @@ class ChatHistoryView(APIView):
                 return Response({'error': 'Missing required data'}, status=status.HTTP_400_BAD_REQUEST)
             
             created_item = create_new_conversation(
-                tenant_id=tenant_id,
-                user_id=user_id,
+                tenant_id=data['tenantId'],
+                user_id=data['userId'],
                 conversation_id=data['conversationId'],
                 question=data['question'],
                 answer=data['answer']

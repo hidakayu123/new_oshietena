@@ -87,46 +87,6 @@ const getAppServicesToken = (): Promise<AppServicesToken | null> => {
     if (globalThis.cachedAppServicesToken && checkNotExpired(globalThis.cachedAppServicesToken)) {
         return Promise.resolve(globalThis.cachedAppServicesToken);
     }
-
-    // const getAppServicesTokenFromMe: () => Promise<AppServicesToken | null> = () => {
-    //     return fetch(appServicesAuthTokenUrl).then(r => {
-    //         if (r.ok) {
-    //             return r.json().then(json => {
-    //                 if (json.length > 0) {
-    //                     const userClaims = json[0]["user_claims"].reduce((acc: Record<string, any>, item: Record<string, any>) => {
-    //                         acc[item.typ] = item.val;
-    //                         return acc;
-    //                     }, {} as Record<string, any>);
-    //                     return {
-    //                         id_token: json[0]["id_token"] as string,
-    //                         access_token: json[0]["access_token"] as string,
-    //                         user_claims: userClaims,
-    //                         tenant_id: userClaims["http://schemas.microsoft.com/identity/claims/tenantid"] ?? null,
-    //                         expires_on: json[0]["expires_on"] as string
-    //                     } as AppServicesToken;
-    //                 }
-    //                 return null;
-    //             });
-    //         }
-    //         return null;
-    //     });
-    // };
-
-    // return getAppServicesTokenFromMe().then(token => {
-    //     if (token) {
-    //         if (checkNotExpired(token)) {
-    //             globalThis.cachedAppServicesToken = token;
-    //             return token;
-    //         }
-    //         return fetch(appServicesAuthTokenRefreshUrl).then(r => {
-    //             if (r.ok) {
-    //                 return getAppServicesTokenFromMe();
-    //             }
-    //             return null;
-    //         });
-    //     }
-    //     return null;
-    // });
 };
 
 export const isUsingAppServicesLogin = (await getAppServicesToken()) != null;

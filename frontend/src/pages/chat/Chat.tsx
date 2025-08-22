@@ -44,14 +44,15 @@ import { msalInstance  } from '../../authConfig'; // 以前デバッグしたト
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from "react-router-dom";
-import { AssistantResponse, InitialAnswerRaw } from "../../api";
+import { ConversationTurn, InitialAnswerRaw } from "../../api";
 
 interface ChatProps {
   initialAnswers?: InitialAnswerRaw[];
+  targetId?: string | null;
 }
-const Chat = ({ initialAnswers }: ChatProps) => {
+const Chat = ({ initialAnswers, targetId }: ChatProps) => {
 const lastQuestionRef = useRef<string>("");
-const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
+const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
         // もし initialAnswers (履歴データ) が渡されていたら...
         if (initialAnswers && initialAnswers.length > 0) {
             // ...それを <Chat> コンポーネントが内部で使う形式 ([string, ChatAppResponse][]) に変換する
@@ -62,7 +63,11 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                     session_state: null,
                     delta: null
                 };
-                return [item.question, answerObject]as [string, ChatAppResponse];
+                return {
+                    id: item.id || uuidv4(), // initialAnswersの各要素に .id が必要
+                    question: item.question,
+                    answer: answerObject
+                };
             });
             lastQuestionRef.current = "履歴取得";
             return transformedHistory;
@@ -72,6 +77,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
         return [];
     });
     console.info(answers)
+    const [scrollToId, setScrollToId] = useState<string | null>(null);
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
     const [promptTemplate, setPromptTemplate] = useState<string>("");
@@ -158,7 +164,13 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
             session_state: {}
         };
         // ★Stateを更新する際は、必ず更新用の関数 (setAnswers) を使う
-        setAnswers(prevAnswers => [...prevAnswers, [question, initialResponse]]);
+        //setAnswers(prevAnswers => [...prevAnswers, [question, initialResponse]]);
+        const newTurn: ConversationTurn = {
+            id: uuidv4(), // 新しいIDを生成
+            question: question,
+            answer: initialResponse
+        };
+        setAnswers(prevAnswers => [...prevAnswers, newTurn]);
 
         try {
             // 2. APIリクエストの構築
@@ -171,7 +183,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
 
             // 現在の会話履歴からAPI用のメッセージ配列を作成
             // 注意：setAnswersは非同期のため、ここでは更新前のanswersを使う
-            const history = answers.flatMap(a => [{ content: a[0], role: "user" }, { content: a[1].message.content, role: "assistant" }]);
+            const history = answers.flatMap(turn => [{ content: turn.question, role: "user" }, { content: turn.answer.message.content, role: "assistant" }]);
 
             const request: ChatAppRequest = {
                 messages: [...history, { content: question, role: "user" }],
@@ -202,20 +214,20 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                         ...(seed !== null ? { seed: seed } : {})
                     }
                 },
-                session_state: answers.length ? answers[answers.length - 1][1].session_state : null
+                session_state: answers.length ? answers[answers.length - 1].answer.session_state : null
             };
 
             // --- DB保存用の共通関数を定義 ---
             const saveConversation = async (question: string, answer: ChatAppResponse) => {
                 // session_state がなければ保存しない
-                if (!answer.session_state) return;
+                // if (!answer.session_state) return;
 
                 try {
                     console.log("DBへの会話保存処理を開始します...");
                     const dbToken = client ? await getToken(client) : undefined;
                     const userId = client?.getActiveAccount()?.username || "unknown-user";
                     const activeAccount = client?.getActiveAccount();
-                    const tenantId = activeAccount?.tenantId ?? null;
+                    const tenantId = activeAccount?.tenantId;
                     const conversationId = uuidv4(); 
 
                     await saveConversationToDb({
@@ -224,7 +236,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                         conversationId: conversationId,
                         question: question,
                         answer: answer
-                    }, dbToken);
+                    }, dbToken ?? null);
 
                     console.log("会話が正常にDBへ保存されました。");
                 } catch (error) {
@@ -246,49 +258,53 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
 
             let finalAnswer: ChatAppResponse;
 
-            if (shouldStream) {
-                // --- ストリーミング処理 ---
-                setIsStreaming(true);
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let partialData = "";
+// ===============================================================================================
+//  以下ストリーミング回答用
+            // if (shouldStream) {
+            //     // --- ストリーミング処理 ---
+            //     setIsStreaming(true);
+            //     const reader = response.body.getReader();
+            //     const decoder = new TextDecoder();
+            //     let partialData = "";
 
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
+            //     while (true) {
+            //         const { value, done } = await reader.read();
+            //         if (done) break;
 
-                    partialData += decoder.decode(value, { stream: true });
-                    const dataBlocks = partialData.split("\n\n");
+            //         partialData += decoder.decode(value, { stream: true });
+            //         const dataBlocks = partialData.split("\n\n");
 
-                    for (let i = 0; i < dataBlocks.length - 1; i++) {
-                        const block = dataBlocks[i];
-                        if (block.startsWith("data: ")) {
-                            const jsonString = block.substring(6);
-                            try {
-                                const event = JSON.parse(jsonString);
-                                setAnswers(prevAnswers => {
-                                    const newAnswers = [...prevAnswers];
-                                    const lastAnswer = newAnswers[newAnswers.length - 1][1];
-                                    if (event.content) {
-                                        lastAnswer.message.content += event.content;
-                                    }
-                                    if (event.context) {
-                                        lastAnswer.context = { ...lastAnswer.context, ...event.context };
-                                    }
-                                    if (event.session_state) {
-                                        lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
-                                    }
-                                    return newAnswers;
-                                });
-                            } catch (e) {
-                                console.error("Failed to parse stream data:", jsonString, e);
-                            }
-                        }
-                    }
-                    partialData = dataBlocks[dataBlocks.length - 1];
-                }
-                finalAnswer =  { ...initialResponse };
-            } else {
+            //         for (let i = 0; i < dataBlocks.length - 1; i++) {
+            //             const block = dataBlocks[i];
+            //             if (block.startsWith("data: ")) {
+            //                 const jsonString = block.substring(6);
+            //                 try {
+            //                     const event = JSON.parse(jsonString);
+            //                     setAnswers(prevAnswers => {
+            //                         const newAnswers = [...prevAnswers];
+            //                         const lastAnswer = newAnswers[newAnswers.length - 1].answer;
+            //                         if (event.content) {
+            //                             lastAnswer.message.content += event.content;
+            //                         }
+            //                         if (event.context) {
+            //                             lastAnswer.context = { ...lastAnswer.context, ...event.context };
+            //                         }
+            //                         if (event.session_state) {
+            //                             lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
+            //                         }
+            //                         return newAnswers;
+            //                     });
+            //                 } catch (e) {
+            //                     console.error("Failed to parse stream data:", jsonString, e);
+            //                 }
+            //             }
+            //         }
+            //         partialData = dataBlocks[dataBlocks.length - 1];
+            //     }
+            //     finalAnswer =  { ...initialResponse };
+            // } else {
+// ===============================================================================================
+
                 // --- 非ストリーミング処理 ---
                 const parsedResponse = await response.json();
                 if (parsedResponse.error) {
@@ -297,15 +313,19 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                 // 最後の回答を、受信した完全なレスポンスで置き換える
                 setAnswers(prevAnswers => {
                     const newAnswers = [...prevAnswers];
-                    newAnswers[newAnswers.length - 1][1] = parsedResponse;
+                    newAnswers[newAnswers.length - 1].answer = parsedResponse;
                     return newAnswers;
                 });
                 finalAnswer = parsedResponse;
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                 const token = client ? await getToken(client) : undefined;
-                historyManager.addItem(parsedResponse.session_state, [...answers, [question, parsedResponse]], token);
+                const historyForManager = answers.map(turn => [turn.question, turn.answer] as [string, ChatAppResponse]);
+                historyManager.addItem(parsedResponse.session_state, [...historyForManager, [question, parsedResponse]], token);
                 };
-            }
+// ===============================================================================================
+//  以下ストリーミング回答用
+            // }
+// ===============================================================================================
 
             await saveConversation(question, finalAnswer);
         } catch (e) {
@@ -315,7 +335,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
             // エラーが発生した場合、最後の回答欄にエラーメッセージを表示する
             setAnswers(prevAnswers => {
                 const newAnswers = [...prevAnswers];
-                newAnswers[newAnswers.length - 1][1].message.content = "エラーが発生しました: " + err.message;
+                newAnswers[newAnswers.length - 1].answer.message.content = "エラーが発生しました: " + err.message;
                 return newAnswers;
             });
         } finally {
@@ -337,7 +357,31 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
         navigate("/");
     };
 
-    useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" }), [isLoading]);
+    useEffect(() => {
+        console.log("【3. Chat 検証】スクロールターゲットを探すuseEffectが実行されました。targetId:", targetId);
+
+        // targetQuestion があり、answersがセットされた後に実行
+        if (targetId && answers.length > 0) {
+            const targetTurn = answers.find(turn => turn.id === targetId);
+            if (targetTurn) {
+                console.log("【3. Chat 検証】ターゲットが見つかりました！ID:", targetTurn.id);
+                setScrollToId(targetTurn.id);
+            } else {
+                console.log("【3. Chat 検証】ターゲットが見つかりませんでした。");
+            }
+        }
+    }, [targetId]); // answersとtargetQuestionが変わった時に実行
+
+
+    useEffect(() => {
+        if (scrollToId) {
+            const element = document.getElementById(`message-${scrollToId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: "auto", block: "start" });
+            }
+            setScrollToId(null); // 処理後にリセット
+        }
+    }, [answers, scrollToId]);
 
     const handleSettingsChange = (field: string, value: any) => {
         switch (field) {
@@ -436,6 +480,10 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
     };
     const { t, i18n } = useTranslation();
 
+    // useEffect(() => {
+    //     chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" });
+    // }, [answers]); 
+
     return (
         <div className={styles.container}>
             {/* Setting the page title using react-helmet-async */}
@@ -469,12 +517,12 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
-                            {answers.map((answer, index) => {
+                            {answers.map((turn, index) => {
                                 const isLastAnswer = index === answers.length - 1;
 
                                 return (
-                                    <div key={index}>
-                                        <UserChatMessage message={answer[0]} />
+                                    <div key={turn.id}>
+                                        <UserChatMessage message={turn.question} id={turn.id} />
                                         <div className={styles.chatMessageGpt}>
                                             {/* 最後の回答欄の表示を、Stateに応じて切り替える */}
                                             {isLastAnswer && error ? (
@@ -489,7 +537,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                                                 <Answer
                                                     isStreaming={isStreaming && isLastAnswer} // ストリーミング中も正しく表示
                                                     key={index}
-                                                    answer={answer[1]}
+                                                    answer={turn.answer}
                                                     index={index}
                                                     speechConfig={speechConfig}
                                                     isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
@@ -516,6 +564,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                             disabled={isLoading}
                             onSend={question => makeApiRequest(question)}
                             showSpeechInput={showSpeechInput}
+                            chatMessageStreamEnd={chatMessageStreamEnd}
                         />
                     </div>
                 </div>
@@ -525,7 +574,7 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                         activeCitation={activeCitation}
                         onActiveTabChanged={x => onToggleTab(x, selectedAnswer)}
                         citationHeight="810px"
-                        answer={answers[selectedAnswer][1]}
+                        answer={answers[selectedAnswer].answer}
                         activeTab={activeAnalysisPanelTab}
                     />
                 )}
@@ -535,9 +584,29 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                         isOpen={isHistoryPanelOpen}
                         notify={!isStreaming && !isLoading}
                         onClose={() => setIsHistoryPanelOpen(false)}
-                        onChatSelected={answers => {
-                            setAnswers(answers);
-                            lastQuestionRef.current = answers[answers.length - 1][0];
+                        onChatSelected={data => { // "data" を受け取る
+
+                            // ★★★★★★★★★★★★★★★★★★★★★★★★★
+                            // ★ data.conversation に対して .map を使います ★
+                            // ★★★★★★★★★★★★★★★★★★★★★★★★★
+                            const transformedHistory = data.conversation.map(turn => {
+                                // ★ このカッコの中で "turn" が使えます ★
+                                // turn は [質問文字列, 回答オブジェクト] という配列です
+                                const question = turn[0];
+                                const answer = turn[1];
+                                return {
+                                    id: uuidv4(), // 古いデータにはIDがないため、ここで新しいIDを生成
+                                    question: question,
+                                    answer: answer
+                                };
+                            }); // ★ ここで .map の処理は終わりです ★
+
+                            const firstMessageId = transformedHistory.length > 0 ? transformedHistory[0].id : null;
+
+                            // ★ .map が終わった後で、stateを更新します ★
+                            setAnswers(transformedHistory);
+                            setScrollToId(data.targetId);
+                            lastQuestionRef.current = transformedHistory.length > 0 ? transformedHistory[transformedHistory.length - 1].question : "";
                         }}
                     />
                 )}
@@ -591,9 +660,8 @@ const [answers, setAnswers] = useState<[string, ChatAppResponse][]>(() => {
                 </Panel>
             </div>
         </div>
+        
     );
 };
 
 export default Chat;
-
-
