@@ -9,12 +9,16 @@
 # !frontend/src/index.tsx
 # !frontend/src/authConfig.ts
 # !frontend/src/pages/
-/app/__pycache__/*
-/new_oshietena/__pycache__/*
-/__pycache__/*
+# /app/__pycache__/*
+# /new_oshietena/__pycache__/*
+# /__pycache__/*
 
-# # Pythonキャッシュファイル
-**/__pycache__/
-*/__pycache__/*
+# # # Pythonキャッシュファイル
+# **/__pycache__/
+# */__pycache__/*
 
 frontend/.env.local
+
+/__pycache__/
+/app/__pycache__/
+/new_oshietena/__pycache__/
