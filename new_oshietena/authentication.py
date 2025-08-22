@@ -6,7 +6,6 @@ from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth.models import User # DjangoのUserモデルを利用
 
 # --- Azure AD 認証のための設定 ---
-# .envファイルから読み込むことを推奨
 SYSTENA_TENANT_ID = os.environ.get("VITE_APP_TENANT_ID")
 CLIENT_ID = os.environ.get("VITE_APP_CLIENT_ID")
 JWKS_URL = f"https://login.microsoftonline.com/{SYSTENA_TENANT_ID}/discovery/v2.0/keys"

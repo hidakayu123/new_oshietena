@@ -163,5 +163,6 @@
         "useOidSecurityFilter": "認証ユーザーのOIDに基づいて検索結果をフィルタリングします。",
         "useGroupsSecurityFilter": "認証ユーザーのグループに基づいて検索結果をフィルタリングします。",
         "useAgenticRetrieval": "Use agentic retrieval from Azure AI Search for multi-query planning. Always uses semantic ranker."
-    }
+    },
+    "rate_limit": "利用回数上限に達しました。"
 }

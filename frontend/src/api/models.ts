@@ -91,6 +91,7 @@ export interface AssistantResponse {
 }
 
 export interface InitialAnswerRaw {
+  id: string;  
   question: string;
   answer: string;
 }
@@ -170,3 +171,9 @@ export interface InitialAnswerRaw {
     question: string;
     answer: string;
 }
+
+export type ConversationTurn = {
+  id: string;
+  question: string;
+  answer: ChatAppResponse;
+};
