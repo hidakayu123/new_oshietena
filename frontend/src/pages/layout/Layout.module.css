@@ -1,7 +1,7 @@
 .layout {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: calc(100vh - 22px);
 }
 
 .header {
