@@ -136,7 +136,7 @@ const SidebarMenu: React.FC<Props> = () => {
 
   // --- 利用回数表示用コンポーネント ---
   const UsageDisplay: React.FC = () => {
-    if (!usageCount) return <div className="usage-display error">DB未接続</div>;
+    if (!usageCount) return <div className="usage-display error">取得中</div>;
 
     return (
       <div className="usage-display">

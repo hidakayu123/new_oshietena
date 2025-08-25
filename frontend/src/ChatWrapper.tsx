@@ -4,6 +4,7 @@ import { getToken, useLogin, msalInstance } from "./authConfig";
 import { useMsal } from "@azure/msal-react";
 import Chat from "./pages/chat/Chat";
 import type { InitialAnswerRaw } from "./api/models"; // 必要な型はこれだけになります
+import styles from "./pages/chat/Chat.module.css";
 
 const ChatWrapper = () => {
     const { id } = useParams<{ id: string }>();
@@ -46,7 +47,13 @@ const ChatWrapper = () => {
         fetchChatDetail();
     }, [id, accounts]);
 
-    if (loading) return <div>読み込み中...</div>;
+    if (loading) {
+    return (
+        <div className={styles["spinner-container"]}>
+            <div className={styles.spinner}></div>
+        </div>
+    );
+    }
 
     if (!initialAnswers) return <div>チャットが見つかりません</div>;
 
