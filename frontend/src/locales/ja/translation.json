@@ -35,7 +35,7 @@
     "developerSettings": "高度な設定",
 
     "chatEmptyStateTitle": "WELCOLE TO おしえテナ",
-    "chatEmptyStateSubtitle": "ご自由にお問い合わせいただくか、もしくは下記のサンプルをお試しください",
+    "chatEmptyStateSubtitle": "",
     "defaultExamples": {
         "1": "私が契約中の Northwind Health Plus の標準プランには何が含まれ、何が含まれないのですか？",
         "2": "パフォーマンス・レビューで何を行いますか？",

@@ -40,7 +40,10 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, init
             setQuestion("");
         }
 
-        chatMessageStreamEnd?.current?.scrollIntoView({ behavior: "smooth" });
+        //chatMessageStreamEnd?.current?.scrollIntoView({ behavior: "smooth" });
+        setTimeout(() => {
+            chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" });
+        }, 50);
     };
 
     const onEnterPress = (ev: React.KeyboardEvent<Element>) => {

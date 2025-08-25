@@ -36,23 +36,32 @@ class ChatCountView(APIView):
         user_id = request.user.username
         print("ユーザーです", user_id)
 
-        # --- 当月の開始日と終了日を計算 ---
-        today = datetime.date.today()
-        start_of_month = today.replace(day=1)
-        end_of_period = today
-
-        # UTCタイムゾーン付きの日時に変換
-        start_of_month_utc = datetime.datetime.combine(
-            start_of_month, datetime.time.min
-        ).replace(tzinfo=datetime.timezone.utc)
-
-        end_of_period_utc = datetime.datetime.combine(
-            end_of_period, datetime.time.max
-        ).replace(tzinfo=datetime.timezone.utc)
-
         try:
             # --- Cosmos DBへのパラメータ化クエリ作成 ---
-            query = (
+            # ユーザの利用期間取得
+            query_term = (
+                "SELECT c.AvailableTerm FROM c "
+                "WHERE c.AvailableuserId = @userId"
+            )
+
+            parameters = [{"name": "@userId", "value": user_id}]
+
+            items = list(container.query_items(
+                query=query_term,
+                parameters=parameters,
+                enable_cross_partition_query=True
+            ))
+            print(items)
+
+            if items:
+                term = items[0]['AvailableTerm']
+                start_of_month_utc = term['start']
+                end_of_period_utc = term['end']
+            else:
+                raise ValueError(f"AvailableTerm not found for user_id={user_id}")
+            
+            # 利用期間内のチャット回数取得
+            query_count = (
                 "SELECT VALUE COUNT(1) FROM c "
                 "WHERE c.userId = @userId "
                 "AND c.createdAt >= @start_date "
@@ -61,21 +70,17 @@ class ChatCountView(APIView):
 
             parameters = [
                 {"name": "@userId", "value": user_id},
-                {"name": "@start_date", "value": start_of_month_utc.isoformat()},
-                {"name": "@end_date", "value": end_of_period_utc.isoformat()},
+                {"name": "@start_date", "value": start_of_month_utc},
+                {"name": "@end_date", "value": end_of_period_utc},
             ]
 
-            # --- クエリの実行 ---
-            items = list(
-                container.query_items(
-                    query=query,
-                    parameters=parameters,
-                    enable_cross_partition_query=True,
-                    # partition_key=user_id  # 効率化のために必要ならコメント解除
-                )
-            )
+            count_items = list(container.query_items(
+                query=query_count,
+                parameters=parameters,
+                enable_cross_partition_query=True
+            ))
 
-            count = items[0] if items else 0
+            count = count_items[0] if count_items else 0
 
             # --- 使用上限の取得とレスポンス作成 ---
             limit_str = os.environ.get("CHAT_USAGE_LIMIT") 

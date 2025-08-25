@@ -260,49 +260,49 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
 
 // ===============================================================================================
 //  以下ストリーミング回答用
-            // if (shouldStream) {
-            //     // --- ストリーミング処理 ---
-            //     setIsStreaming(true);
-            //     const reader = response.body.getReader();
-            //     const decoder = new TextDecoder();
-            //     let partialData = "";
+            if (shouldStream) {
+                // --- ストリーミング処理 ---
+                setIsStreaming(true);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let partialData = "";
 
-            //     while (true) {
-            //         const { value, done } = await reader.read();
-            //         if (done) break;
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
 
-            //         partialData += decoder.decode(value, { stream: true });
-            //         const dataBlocks = partialData.split("\n\n");
+                    partialData += decoder.decode(value, { stream: true });
+                    const dataBlocks = partialData.split("\n\n");
 
-            //         for (let i = 0; i < dataBlocks.length - 1; i++) {
-            //             const block = dataBlocks[i];
-            //             if (block.startsWith("data: ")) {
-            //                 const jsonString = block.substring(6);
-            //                 try {
-            //                     const event = JSON.parse(jsonString);
-            //                     setAnswers(prevAnswers => {
-            //                         const newAnswers = [...prevAnswers];
-            //                         const lastAnswer = newAnswers[newAnswers.length - 1].answer;
-            //                         if (event.content) {
-            //                             lastAnswer.message.content += event.content;
-            //                         }
-            //                         if (event.context) {
-            //                             lastAnswer.context = { ...lastAnswer.context, ...event.context };
-            //                         }
-            //                         if (event.session_state) {
-            //                             lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
-            //                         }
-            //                         return newAnswers;
-            //                     });
-            //                 } catch (e) {
-            //                     console.error("Failed to parse stream data:", jsonString, e);
-            //                 }
-            //             }
-            //         }
-            //         partialData = dataBlocks[dataBlocks.length - 1];
-            //     }
-            //     finalAnswer =  { ...initialResponse };
-            // } else {
+                    for (let i = 0; i < dataBlocks.length - 1; i++) {
+                        const block = dataBlocks[i];
+                        if (block.startsWith("data: ")) {
+                            const jsonString = block.substring(6);
+                            try {
+                                const event = JSON.parse(jsonString);
+                                setAnswers(prevAnswers => {
+                                    const newAnswers = [...prevAnswers];
+                                    const lastAnswer = newAnswers[newAnswers.length - 1].answer;
+                                    if (event.content) {
+                                        lastAnswer.message.content += event.content;
+                                    }
+                                    if (event.context) {
+                                        lastAnswer.context = { ...lastAnswer.context, ...event.context };
+                                    }
+                                    if (event.session_state) {
+                                        lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
+                                    }
+                                    return newAnswers;
+                                });
+                            } catch (e) {
+                                console.error("Failed to parse stream data:", jsonString, e);
+                            }
+                        }
+                    }
+                    partialData = dataBlocks[dataBlocks.length - 1];
+                }
+                finalAnswer =  { ...initialResponse };
+            } else {
 // ===============================================================================================
 
                 // --- 非ストリーミング処理 ---
@@ -324,7 +324,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                 };
 // ===============================================================================================
 //  以下ストリーミング回答用
-            // }
+            }
 // ===============================================================================================
 
             await saveConversation(question, finalAnswer);
