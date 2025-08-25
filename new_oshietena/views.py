@@ -32,7 +32,7 @@ class ChatView(APIView):
     authentication_classes = [AzureADJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         try:
             messages = request.data.get("messages", [])
             target_index = request.auth.get('oid')
@@ -111,7 +111,7 @@ class ChatHistoryView(APIView):
     authentication_classes = [AzureADJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, **kwargs):
         try:
             user_id = request.user.username
             chat_id = kwargs.get('chat_id')  # ← ここでURLのidパラメータを取得

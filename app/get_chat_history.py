@@ -38,6 +38,7 @@ def fetch_history_for_user(user_id: str) -> list:
     SELECT c.id, c.title
     FROM c
     WHERE c.userId = @userid
+    AND NOT IS_DEFINED(c.AvailableTerm)
     ORDER BY c.createdAt DESC
     """
 
@@ -48,8 +49,8 @@ def fetch_history_for_user(user_id: str) -> list:
             container.query_items(
                 query=query,
                 parameters=parameters,
-                enable_cross_partition_query=True,
-                # partition_key=user_id  # 必要に応じてコメント解除
+                # enable_cross_partition_query=True,
+                partition_key=user_id  
             )
         )
         return items
@@ -82,6 +83,7 @@ def fetch_single_chat_by_id(user_id, chat_id):
         SELECT c.id, c.question, c.answer
         FROM c
         WHERE c.userId = @userId
+        AND NOT IS_DEFINED(c.AvailableTerm)
         ORDER BY c.createdAt DESC
         """
         parameters = [{"name": "@userId", "value": user_id}]
@@ -90,7 +92,7 @@ def fetch_single_chat_by_id(user_id, chat_id):
             container.query_items(
                 query=query,
                 parameters=parameters,
-                enable_cross_partition_query=True,
+                partition_key=user_id  
             )
         )
         print(items)
