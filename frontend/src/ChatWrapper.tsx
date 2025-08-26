@@ -12,6 +12,7 @@ const ChatWrapper = () => {
     const [initialAnswers, setInitialAnswers] = useState<InitialAnswerRaw[] | null>(null);
     const [loading, setLoading] = useState(true);
     const { accounts } = useMsal();
+    const historyBoxId = searchParams.get('historyBoxId');
 
     useEffect(() => {
         const fetchChatDetail = async () => {
@@ -24,7 +25,6 @@ const ChatWrapper = () => {
             try {
                 const client = useLogin ? msalInstance : undefined;
                 const token = client ? await getToken(client) : undefined;
-                const historyBoxId = searchParams.get('historyBoxId');
 
                 const response = await fetch(`/api/history/${id}/?historyBoxId=${historyBoxId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -62,7 +62,7 @@ const ChatWrapper = () => {
     // ★★★★★★★★★★★★★★★★★★★★★★★★★
     // ★ ここのpropsも修正します ★
     // ★★★★★★★★★★★★★★★★★★★★★★★★★
-    return <Chat initialAnswers={initialAnswers} targetId={id} />;
+    return <Chat initialAnswers={initialAnswers} targetId={id} historyBoxId={historyBoxId} />;
 };
 
 export default ChatWrapper;

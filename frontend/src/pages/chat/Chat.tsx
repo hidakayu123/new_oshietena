@@ -49,35 +49,44 @@ import { ConversationTurn, InitialAnswerRaw } from "../../api";
 interface ChatProps {
   initialAnswers?: InitialAnswerRaw[];
   targetId?: string | null;
+  historyBoxId?: string | null;
 }
-const Chat = ({ initialAnswers, targetId }: ChatProps) => {
-const lastQuestionRef = useRef<string>("");
-const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
-        // もし initialAnswers (履歴データ) が渡されていたら...
-        if (initialAnswers && initialAnswers.length > 0) {
-            // ...それを <Chat> コンポーネントが内部で使う形式 ([string, ChatAppResponse][]) に変換する
-            const transformedHistory = initialAnswers.map(item => {
-                const answerObject: ChatAppResponse = {
-                    message: { content: item.answer, role: 'assistant' },
-                    context: { data_points: [], followup_questions: [], thoughts: [] },
-                    session_state: null,
-                    delta: null
-                };
-                return {
-                    id: item.id || uuidv4(), // initialAnswersの各要素に .id が必要
-                    question: item.question,
-                    answer: answerObject
-                };
-            });
-            lastQuestionRef.current = "履歴取得";
-            return transformedHistory;
+const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
+    const [localHistoryBoxId, setLocalHistoryBoxId] = useState<string | null>(historyBoxId || null);
+    useEffect(() => {
+        if (!localHistoryBoxId) {
+        // 💡 props で渡されてなかった場合に uuid を生成
+        const newId = uuidv4();
+        setLocalHistoryBoxId(newId);
         }
-        
-        // 履歴データがなければ、空の配列で初期化する
-        return [];
-    });
-    console.info(answers)
-    const [historyBoxId, setHistoryBoxId] = useState<string>('');
+    }, [localHistoryBoxId]);
+    const lastQuestionRef = useRef<string>("");
+    const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
+            // もし initialAnswers (履歴データ) が渡されていたら...
+            if (initialAnswers && initialAnswers.length > 0) {
+                // ...それを <Chat> コンポーネントが内部で使う形式 ([string, ChatAppResponse][]) に変換する
+                const transformedHistory = initialAnswers.map(item => {
+                    const answerObject: ChatAppResponse = {
+                        message: { content: item.answer, role: 'assistant' },
+                        context: { data_points: [], followup_questions: [], thoughts: [] },
+                        session_state: null,
+                        delta: null
+                    };
+                    return {
+                        id: item.id || uuidv4(), // initialAnswersの各要素に .id が必要
+                        question: item.question,
+                        answer: answerObject
+                    };
+                });
+                lastQuestionRef.current = "履歴取得";
+                return transformedHistory;
+            }
+            
+            // 履歴データがなければ、空の配列で初期化する
+            return [];
+        });
+        console.info(answers)
+    
     const [scrollToId, setScrollToId] = useState<string | null>(null);
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
@@ -146,9 +155,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
     })();
     const historyManager = useHistoryManager(historyProvider);
     const { token } = useAuthToken();
-    useEffect(() => {
-        setHistoryBoxId(uuidv4());
-    }, []);
+    
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -240,7 +247,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                         conversationId: conversationId,
                         question: question,
                         answer: answer,
-                        historyBoxId: historyBoxId,
+                        historyBoxId: localHistoryBoxId,
                     }, dbToken ?? null);
 
                     console.log("会話が正常にDBへ保存されました。");
