@@ -260,49 +260,49 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
 
 // ===============================================================================================
 //  以下ストリーミング回答用
-            if (shouldStream) {
-                // --- ストリーミング処理 ---
-                setIsStreaming(true);
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let partialData = "";
+            // if (shouldStream) {
+            //     // --- ストリーミング処理 ---
+            //     setIsStreaming(true);
+            //     const reader = response.body.getReader();
+            //     const decoder = new TextDecoder();
+            //     let partialData = "";
 
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
+            //     while (true) {
+            //         const { value, done } = await reader.read();
+            //         if (done) break;
 
-                    partialData += decoder.decode(value, { stream: true });
-                    const dataBlocks = partialData.split("\n\n");
+            //         partialData += decoder.decode(value, { stream: true });
+            //         const dataBlocks = partialData.split("\n\n");
 
-                    for (let i = 0; i < dataBlocks.length - 1; i++) {
-                        const block = dataBlocks[i];
-                        if (block.startsWith("data: ")) {
-                            const jsonString = block.substring(6);
-                            try {
-                                const event = JSON.parse(jsonString);
-                                setAnswers(prevAnswers => {
-                                    const newAnswers = [...prevAnswers];
-                                    const lastAnswer = newAnswers[newAnswers.length - 1].answer;
-                                    if (event.content) {
-                                        lastAnswer.message.content += event.content;
-                                    }
-                                    if (event.context) {
-                                        lastAnswer.context = { ...lastAnswer.context, ...event.context };
-                                    }
-                                    if (event.session_state) {
-                                        lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
-                                    }
-                                    return newAnswers;
-                                });
-                            } catch (e) {
-                                console.error("Failed to parse stream data:", jsonString, e);
-                            }
-                        }
-                    }
-                    partialData = dataBlocks[dataBlocks.length - 1];
-                }
-                finalAnswer =  { ...initialResponse };
-            } else {
+            //         for (let i = 0; i < dataBlocks.length - 1; i++) {
+            //             const block = dataBlocks[i];
+            //             if (block.startsWith("data: ")) {
+            //                 const jsonString = block.substring(6);
+            //                 try {
+            //                     const event = JSON.parse(jsonString);
+            //                     setAnswers(prevAnswers => {
+            //                         const newAnswers = [...prevAnswers];
+            //                         const lastAnswer = newAnswers[newAnswers.length - 1].answer;
+            //                         if (event.content) {
+            //                             lastAnswer.message.content += event.content;
+            //                         }
+            //                         if (event.context) {
+            //                             lastAnswer.context = { ...lastAnswer.context, ...event.context };
+            //                         }
+            //                         if (event.session_state) {
+            //                             lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
+            //                         }
+            //                         return newAnswers;
+            //                     });
+            //                 } catch (e) {
+            //                     console.error("Failed to parse stream data:", jsonString, e);
+            //                 }
+            //             }
+            //         }
+            //         partialData = dataBlocks[dataBlocks.length - 1];
+            //     }
+            //     finalAnswer =  { ...initialResponse };
+            // } else {
 // ===============================================================================================
 
                 // --- 非ストリーミング処理 ---
@@ -324,7 +324,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                 };
 // ===============================================================================================
 //  以下ストリーミング回答用
-            }
+            // }
 // ===============================================================================================
 
             await saveConversation(question, finalAnswer);
@@ -383,82 +383,82 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
         }
     }, [answers, scrollToId]);
 
-    const handleSettingsChange = (field: string, value: any) => {
-        switch (field) {
-            case "promptTemplate":
-                setPromptTemplate(value);
-                break;
-            case "temperature":
-                setTemperature(value);
-                break;
-            case "seed":
-                setSeed(value);
-                break;
-            case "minimumRerankerScore":
-                setMinimumRerankerScore(value);
-                break;
-            case "minimumSearchScore":
-                setMinimumSearchScore(value);
-                break;
-            case "retrieveCount":
-                setRetrieveCount(value);
-                break;
-            case "maxSubqueryCount":
-                setMaxSubqueryCount(value);
-                break;
-            case "resultsMergeStrategy":
-                setResultsMergeStrategy(value);
-                break;
-            case "useSemanticRanker":
-                setUseSemanticRanker(value);
-                break;
-            case "useQueryRewriting":
-                setUseQueryRewriting(value);
-                break;
-            case "reasoningEffort":
-                setReasoningEffort(value);
-                break;
-            case "useSemanticCaptions":
-                setUseSemanticCaptions(value);
-                break;
-            case "excludeCategory":
-                setExcludeCategory(value);
-                break;
-            case "includeCategory":
-                setIncludeCategory(value);
-                break;
-            case "useOidSecurityFilter":
-                setUseOidSecurityFilter(value);
-                break;
-            case "useGroupsSecurityFilter":
-                setUseGroupsSecurityFilter(value);
-                break;
-            case "shouldStream":
-                setShouldStream(value);
-                break;
-            case "useSuggestFollowupQuestions":
-                setUseSuggestFollowupQuestions(value);
-                break;
-            case "useGPT4V":
-                setUseGPT4V(value);
-                break;
-            case "gpt4vInput":
-                setGPT4VInput(value);
-                break;
-            case "vectorFields":
-                setVectorFields(value);
-                break;
-            case "retrievalMode":
-                setRetrievalMode(value);
-                break;
-            case "useAgenticRetrieval":
-                setUseAgenticRetrieval(value);
-        }
-    };
+    // const handleSettingsChange = (field: string, value: any) => {
+    //     switch (field) {
+    //         case "promptTemplate":
+    //             setPromptTemplate(value);
+    //             break;
+    //         case "temperature":
+    //             setTemperature(value);
+    //             break;
+    //         case "seed":
+    //             setSeed(value);
+    //             break;
+    //         case "minimumRerankerScore":
+    //             setMinimumRerankerScore(value);
+    //             break;
+    //         case "minimumSearchScore":
+    //             setMinimumSearchScore(value);
+    //             break;
+    //         case "retrieveCount":
+    //             setRetrieveCount(value);
+    //             break;
+    //         case "maxSubqueryCount":
+    //             setMaxSubqueryCount(value);
+    //             break;
+    //         case "resultsMergeStrategy":
+    //             setResultsMergeStrategy(value);
+    //             break;
+    //         case "useSemanticRanker":
+    //             setUseSemanticRanker(value);
+    //             break;
+    //         case "useQueryRewriting":
+    //             setUseQueryRewriting(value);
+    //             break;
+    //         case "reasoningEffort":
+    //             setReasoningEffort(value);
+    //             break;
+    //         case "useSemanticCaptions":
+    //             setUseSemanticCaptions(value);
+    //             break;
+    //         case "excludeCategory":
+    //             setExcludeCategory(value);
+    //             break;
+    //         case "includeCategory":
+    //             setIncludeCategory(value);
+    //             break;
+    //         case "useOidSecurityFilter":
+    //             setUseOidSecurityFilter(value);
+    //             break;
+    //         case "useGroupsSecurityFilter":
+    //             setUseGroupsSecurityFilter(value);
+    //             break;
+    //         case "shouldStream":
+    //             setShouldStream(value);
+    //             break;
+    //         case "useSuggestFollowupQuestions":
+    //             setUseSuggestFollowupQuestions(value);
+    //             break;
+    //         case "useGPT4V":
+    //             setUseGPT4V(value);
+    //             break;
+    //         case "gpt4vInput":
+    //             setGPT4VInput(value);
+    //             break;
+    //         case "vectorFields":
+    //             setVectorFields(value);
+    //             break;
+    //         case "retrievalMode":
+    //             setRetrievalMode(value);
+    //             break;
+    //         case "useAgenticRetrieval":
+    //             setUseAgenticRetrieval(value);
+    //     }
+    // };
 
-    const onExampleClicked = (example: string) => {
-        makeApiRequest(example);
-    };
+    // const onExampleClicked = (example: string) => {
+    //     makeApiRequest(example);
+    // };
     const onShowCitation = (citation: string, index: number) => {
         if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
             setActiveAnalysisPanelTab(undefined);
@@ -492,14 +492,14 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
             </Helmet>
             <div className={styles.commandsSplitContainer}>
                 <div className={styles.commandsContainer}>
-                    {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
+                    {/* {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
                         <HistoryButton className={styles.commandButton} onClick={() => setIsHistoryPanelOpen(!isHistoryPanelOpen)} />
-                    )}
+                    )} */}
                 </div>
                 <div className={styles.commandsContainer}>
                     <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
                     {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
-                    <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
+                    {/* <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} /> */}
                 </div>
             </div>
             <Sidebarmenu/>
@@ -510,10 +510,10 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                             <img src={appLogo} alt="App logo" width="120" height="120" />
 
                             <h1 className={styles.chatEmptyStateTitle}>{t("chatEmptyStateTitle")}</h1>
-                            <h2 className={styles.chatEmptyStateSubtitle}>{t("chatEmptyStateSubtitle")}</h2>
+                            {/* <h2 className={styles.chatEmptyStateSubtitle}>{t("chatEmptyStateSubtitle")}</h2> */}
                             {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
 
-                            <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} />
+                            {/* <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} /> */}
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
@@ -568,7 +568,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                         />
                     </div>
                 </div>
-                {answers.length > 0 && activeAnalysisPanelTab && (
+                {/* {answers.length > 0 && activeAnalysisPanelTab && (
                     <AnalysisPanel
                         className={styles.chatAnalysisPanel}
                         activeCitation={activeCitation}
@@ -657,7 +657,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                         onChange={handleSettingsChange}
                     />
                     {useLogin && <TokenClaimsDisplay />}
-                </Panel>
+                </Panel> */}
             </div>
         </div>
         

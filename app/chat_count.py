@@ -49,7 +49,7 @@ class ChatCountView(APIView):
             items = list(container.query_items(
                 query=query_term,
                 parameters=parameters,
-                enable_cross_partition_query=True
+                partition_key=user_id  
             ))
             print(items)
 
@@ -77,7 +77,7 @@ class ChatCountView(APIView):
             count_items = list(container.query_items(
                 query=query_count,
                 parameters=parameters,
-                enable_cross_partition_query=True
+                partition_key=user_id  
             ))
 
             count = count_items[0] if count_items else 0
