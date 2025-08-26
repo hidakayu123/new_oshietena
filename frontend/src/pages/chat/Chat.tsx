@@ -1,6 +1,6 @@
 import React from 'react';
 //import { useAppAuth } from '../../AuthHandler'; 
-import { useRef, useState, useEffect, useContext } from "react";
+import { useRef, useState, useEffect, useContext, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
 import { Panel, DefaultButton } from "@fluentui/react";
@@ -357,7 +357,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
         navigate("/");
     };
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         console.log("【3. Chat 検証】スクロールターゲットを探すuseEffectが実行されました。targetId:", targetId);
 
         // targetQuestion があり、answersがセットされた後に実行
@@ -373,7 +373,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
     }, [targetId]); // answersとtargetQuestionが変わった時に実行
 
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (scrollToId) {
             const element = document.getElementById(`message-${scrollToId}`);
             if (element) {
