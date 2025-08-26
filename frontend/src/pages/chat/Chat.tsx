@@ -77,6 +77,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
         return [];
     });
     console.info(answers)
+    const [historyBoxId, setHistoryBoxId] = useState<string>('');
     const [scrollToId, setScrollToId] = useState<string | null>(null);
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
@@ -145,6 +146,9 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
     })();
     const historyManager = useHistoryManager(historyProvider);
     const { token } = useAuthToken();
+    useEffect(() => {
+        setHistoryBoxId(uuidv4());
+    }, []);
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -235,7 +239,8 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                         tenantId: tenantId,
                         conversationId: conversationId,
                         question: question,
-                        answer: answer
+                        answer: answer,
+                        historyBoxId: historyBoxId,
                     }, dbToken ?? null);
 
                     console.log("会話が正常にDBへ保存されました。");

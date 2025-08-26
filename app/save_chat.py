@@ -26,17 +26,19 @@ def create_new_conversation(
     conversation_id: str,
     question: dict,
     answer: dict,
+    historyBoxId: str,
 ) -> dict:
     """
     新しい会話をデータベースに作成します。
     パーティションキーにはテナントIDを使用します。
 
     Args:
-        tenant_id (str): 顧客のテナントID (パーティションキー)
-        user_id (str): 質問したユーザーのID
+        tenant_id (str): 顧客のテナントID
+        user_id (str): 質問したユーザーのID (パーティションキー)
         conversation_id (str): 新しい会話のID
         question (dict): ユーザーからの質問
         answer (dict): AIからの回答
+        historyBoxId (str): チャットの一塊
 
     Returns:
         dict: 作成されたアイテムの情報
@@ -55,6 +57,7 @@ def create_new_conversation(
         "title": question[:30],  
         "question": question,
         "answer": answer.get("message", {}).get("content", ""),
+        "historyBoxId": historyBoxId,
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "type": "conversation",
     }

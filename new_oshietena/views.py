@@ -115,12 +115,13 @@ class ChatHistoryView(APIView):
         try:
             user_id = request.user.username
             chat_id = kwargs.get('chat_id')  # ← ここでURLのidパラメータを取得
-            print(f"🧩 tenant_id: {user_id}, chat_id: {chat_id}")
+            history_box_id = request.GET.get('historyBoxId')
+            print(f"🧩 tenant_id: {user_id}, chat_id: {chat_id},historyBoxId: {history_box_id}")
 
 
             if chat_id:
                 # 個別チャット取得
-                item = fetch_single_chat_by_id(user_id, chat_id)
+                item = fetch_single_chat_by_id(user_id, history_box_id)
                 if item:
                     print("✅ 履歴取得")
                     return Response(item, status=status.HTTP_200_OK)
@@ -139,6 +140,7 @@ class ChatHistoryView(APIView):
     def post(self, request, *args, **kwargs):
         try:
             data = request.data
+            print("データです", data)
             
             # 必須データのチェック
             required_fields = ['conversationId', 'question', 'answer']
@@ -150,7 +152,8 @@ class ChatHistoryView(APIView):
                 user_id=data['userId'],
                 conversation_id=data['conversationId'],
                 question=data['question'],
-                answer=data['answer']
+                answer=data['answer'],
+                historyBoxId=data['historyBoxId']
             )
             return Response(created_item, status=status.HTTP_201_CREATED)
         except Exception as e:

@@ -184,6 +184,7 @@ interface ConversationData {
     question: string;
     answer: ChatAppResponse;
     tenantId?: string | null;
+    historyBoxId?: string;
 }
 
 /**

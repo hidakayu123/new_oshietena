@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { getToken, useLogin, msalInstance } from "./authConfig";
 import { useMsal } from "@azure/msal-react";
 import Chat from "./pages/chat/Chat";
@@ -8,6 +8,7 @@ import styles from "./pages/chat/Chat.module.css";
 
 const ChatWrapper = () => {
     const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
     const [initialAnswers, setInitialAnswers] = useState<InitialAnswerRaw[] | null>(null);
     const [loading, setLoading] = useState(true);
     const { accounts } = useMsal();
@@ -23,8 +24,9 @@ const ChatWrapper = () => {
             try {
                 const client = useLogin ? msalInstance : undefined;
                 const token = client ? await getToken(client) : undefined;
+                const historyBoxId = searchParams.get('historyBoxId');
 
-                const response = await fetch(`/api/history/${id}/`, {
+                const response = await fetch(`/api/history/${id}/?historyBoxId=${historyBoxId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
