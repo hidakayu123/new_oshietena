@@ -35,7 +35,7 @@ def fetch_history_for_user(user_id: str) -> list:
         raise Exception("Database connection is not available.")
 
     query = """
-    SELECT c.id, c.title
+    SELECT c.id, c.title, c.historyBoxId
     FROM c
     WHERE c.userId = @userid
     AND NOT IS_DEFINED(c.AvailableTerm)
@@ -63,13 +63,13 @@ def fetch_history_for_user(user_id: str) -> list:
         raise
 
 
-def fetch_single_chat_by_id(user_id, chat_id):
+def fetch_single_chat_by_id(user_id, history_box_id):
     """
     指定ユーザーのチャット履歴から単一のチャットを取得する関数。
 
     Args:
         user_id: ユーザーID
-        chat_id: チャットID（現在は使われていないが将来の拡張用）
+        history_box_id: チャットの一塊
 
     Returns:
         list or None: チャット履歴のリストまたは None
@@ -82,11 +82,11 @@ def fetch_single_chat_by_id(user_id, chat_id):
         query = """
         SELECT c.id, c.question, c.answer
         FROM c
-        WHERE c.userId = @userId
+        WHERE c.userId = @userId AND c.historyBoxId = @historyBoxId
         AND NOT IS_DEFINED(c.AvailableTerm)
         ORDER BY c.createdAt DESC
         """
-        parameters = [{"name": "@userId", "value": user_id}]
+        parameters = [{"name": "@userId", "value": user_id},{"name": "@historyBoxId", "value": history_box_id}]
 
         items = list(
             container.query_items(

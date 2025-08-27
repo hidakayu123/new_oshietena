@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { getToken, useLogin, msalInstance } from "./authConfig";
 import { useMsal } from "@azure/msal-react";
 import Chat from "./pages/chat/Chat";
@@ -8,9 +8,11 @@ import styles from "./pages/chat/Chat.module.css";
 
 const ChatWrapper = () => {
     const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
     const [initialAnswers, setInitialAnswers] = useState<InitialAnswerRaw[] | null>(null);
     const [loading, setLoading] = useState(true);
     const { accounts } = useMsal();
+    const historyBoxId = searchParams.get('historyBoxId');
 
     useEffect(() => {
         const fetchChatDetail = async () => {
@@ -24,7 +26,7 @@ const ChatWrapper = () => {
                 const client = useLogin ? msalInstance : undefined;
                 const token = client ? await getToken(client) : undefined;
 
-                const response = await fetch(`/api/history/${id}/`, {
+                const response = await fetch(`/api/history/${id}/?historyBoxId=${historyBoxId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -60,7 +62,7 @@ const ChatWrapper = () => {
     // ★★★★★★★★★★★★★★★★★★★★★★★★★
     // ★ ここのpropsも修正します ★
     // ★★★★★★★★★★★★★★★★★★★★★★★★★
-    return <Chat initialAnswers={initialAnswers} targetId={id} />;
+    return <Chat initialAnswers={initialAnswers} targetId={id} historyBoxId={historyBoxId} />;
 };
 
 export default ChatWrapper;
