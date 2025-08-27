@@ -36,6 +36,7 @@ class ChatView(APIView):
         try:
             messages = request.data.get("messages", [])
             target_index = request.auth.get('oid')
+            auth_header = request.headers.get('Authorization')
             if not messages:
                 return Response({"error": "messages field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -54,7 +55,7 @@ class ChatView(APIView):
                     "role": "system",
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
-                response = handle_chatbot_response(messages)
+                response = handle_chatbot_response(messages, auth_header)
         #         content = response.choices[0].message.content
         #         return JsonResponse({
         #             "message": {
