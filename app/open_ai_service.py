@@ -26,39 +26,39 @@ def handle_chatbot_response(messages):
     kwargs = {
         "messages": messages,
         "model": deployment,
-        "stream": False,
-        # "stream": True,   
+        # "stream": False,
+        "stream": True,   
         "temperature": 0,
     }
     response = client.chat.completions.create(**kwargs)
     return response
 #===============================================================================================
 # 以下ストリーミング回答用
-# def stream_chatbot_response(messages, response):
-#     print("【Python】1. stream_chatbot_response 関数が開始されました") # ★追加
-#     try:
-#         chunk_count = 0
-#         for chunk in response:
-#             chunk_count += 1
-#             print(f"【Python】2. LLMからのチャンクを受信しました ({chunk_count}回目)") # ★追加
+def stream_chatbot_response(messages, response):
+    print("【Python】1. stream_chatbot_response 関数が開始されました") # ★追加
+    try:
+        chunk_count = 0
+        for chunk in response:
+            chunk_count += 1
+            print(f"【Python】2. LLMからのチャンクを受信しました ({chunk_count}回目)") # ★追加
 
-#             if not (chunk.choices and chunk.choices[0].delta):
-#                 print("【Python】警告: 無効なチャンクです。スキップします。") # ★追加
-#                 continue
+            if not (chunk.choices and chunk.choices[0].delta):
+                print("【Python】警告: 無効なチャンクです。スキップします。") # ★追加
+                continue
 
-#             delta = chunk.choices[0].delta
+            delta = chunk.choices[0].delta
             
-#             if delta.content:
-#                 print(f"【Python】3. contentをyieldします: '{delta.content}'") # ★追加
-#                 data = {"content": delta.content}
-#                 yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+            if delta.content:
+                print(f"【Python】3. contentをyieldします: '{delta.content}'") # ★追加
+                data = {"content": delta.content}
+                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
             
-#             # (finish_reasonの処理などは省略)
+            # (finish_reasonの処理などは省略)
 
-#         print(f"【Python】4. ループが正常に終了しました。総チャンク数: {chunk_count}") # ★追加
+        print(f"【Python】4. ループが正常に終了しました。総チャンク数: {chunk_count}") # ★追加
 
-#     except Exception as e:
-#         print(f"【Python】エラー: ストリーム処理中に例外が発生しました: {e}") # ★追加
-#         # エラー発生をフロントに通知するのも有効
-#         yield f'data: {json.dumps({"error": "An error occurred on the server."})}\n\n'
+    except Exception as e:
+        print(f"【Python】エラー: ストリーム処理中に例外が発生しました: {e}") # ★追加
+        # エラー発生をフロントに通知するのも有効
+        yield f'data: {json.dumps({"error": "An error occurred on the server."})}\n\n'
 #===============================================================================================

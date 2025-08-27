@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 // 型定義
 type Props = {};
 type UsageResponse = { count?: number | null; limit: number };
-type ChatHistoryItem = { id: string; title: string };
+type ChatHistoryItem = { id: string; title: string; historyBoxId: string;};
 
 const SidebarMenu: React.FC<Props> = () => {
   const navigate = useNavigate();
@@ -20,11 +20,13 @@ const SidebarMenu: React.FC<Props> = () => {
           console.error("Clicked history item not found!");
           return;
       }
+      const historyBoxIdToPass = clickedItem.historyBoxId;
 
       console.log("【1. クリック検知】クリックされたアイテム:", clickedItem);
+      console.log("【11. クリック検知】クリックされたアイテム:", historyBoxIdToPass);
 
       // 3. URLの末尾に「# + 質問のタイトル」を追加してページを移動させます
-      navigate(`/chat/${clickedItem.id}#${clickedItem.id}`);
+      navigate(`/chat/${clickedItem.id}?historyBoxId=${historyBoxIdToPass}`);
   };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 

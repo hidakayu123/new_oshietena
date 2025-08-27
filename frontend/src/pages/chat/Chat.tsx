@@ -1,6 +1,6 @@
 import React from 'react';
 //import { useAppAuth } from '../../AuthHandler'; 
-import { useRef, useState, useEffect, useContext } from "react";
+import { useRef, useState, useEffect, useContext, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
 import { Panel, DefaultButton } from "@fluentui/react";
@@ -49,34 +49,44 @@ import { ConversationTurn, InitialAnswerRaw } from "../../api";
 interface ChatProps {
   initialAnswers?: InitialAnswerRaw[];
   targetId?: string | null;
+  historyBoxId?: string | null;
 }
-const Chat = ({ initialAnswers, targetId }: ChatProps) => {
-const lastQuestionRef = useRef<string>("");
-const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
-        // もし initialAnswers (履歴データ) が渡されていたら...
-        if (initialAnswers && initialAnswers.length > 0) {
-            // ...それを <Chat> コンポーネントが内部で使う形式 ([string, ChatAppResponse][]) に変換する
-            const transformedHistory = initialAnswers.map(item => {
-                const answerObject: ChatAppResponse = {
-                    message: { content: item.answer, role: 'assistant' },
-                    context: { data_points: [], followup_questions: [], thoughts: [] },
-                    session_state: null,
-                    delta: null
-                };
-                return {
-                    id: item.id || uuidv4(), // initialAnswersの各要素に .id が必要
-                    question: item.question,
-                    answer: answerObject
-                };
-            });
-            lastQuestionRef.current = "履歴取得";
-            return transformedHistory;
+const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
+    const [localHistoryBoxId, setLocalHistoryBoxId] = useState<string | null>(historyBoxId || null);
+    useEffect(() => {
+        if (!localHistoryBoxId) {
+        // 💡 props で渡されてなかった場合に uuid を生成
+        const newId = uuidv4();
+        setLocalHistoryBoxId(newId);
         }
-        
-        // 履歴データがなければ、空の配列で初期化する
-        return [];
-    });
-    console.info(answers)
+    }, [localHistoryBoxId]);
+    const lastQuestionRef = useRef<string>("");
+    const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
+            // もし initialAnswers (履歴データ) が渡されていたら...
+            if (initialAnswers && initialAnswers.length > 0) {
+                // ...それを <Chat> コンポーネントが内部で使う形式 ([string, ChatAppResponse][]) に変換する
+                const transformedHistory = initialAnswers.map(item => {
+                    const answerObject: ChatAppResponse = {
+                        message: { content: item.answer, role: 'assistant' },
+                        context: { data_points: [], followup_questions: [], thoughts: [] },
+                        session_state: null,
+                        delta: null
+                    };
+                    return {
+                        id: item.id || uuidv4(), // initialAnswersの各要素に .id が必要
+                        question: item.question,
+                        answer: answerObject
+                    };
+                });
+                lastQuestionRef.current = "履歴取得";
+                return transformedHistory;
+            }
+            
+            // 履歴データがなければ、空の配列で初期化する
+            return [];
+        });
+        console.info(answers)
+    
     const [scrollToId, setScrollToId] = useState<string | null>(null);
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
@@ -145,6 +155,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
     })();
     const historyManager = useHistoryManager(historyProvider);
     const { token } = useAuthToken();
+    
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -235,7 +246,8 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                         tenantId: tenantId,
                         conversationId: conversationId,
                         question: question,
-                        answer: answer
+                        answer: answer,
+                        historyBoxId: localHistoryBoxId,
                     }, dbToken ?? null);
 
                     console.log("会話が正常にDBへ保存されました。");
@@ -260,49 +272,49 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
 
 // ===============================================================================================
 //  以下ストリーミング回答用
-            // if (shouldStream) {
-            //     // --- ストリーミング処理 ---
-            //     setIsStreaming(true);
-            //     const reader = response.body.getReader();
-            //     const decoder = new TextDecoder();
-            //     let partialData = "";
+            if (shouldStream) {
+                // --- ストリーミング処理 ---
+                setIsStreaming(true);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let partialData = "";
 
-            //     while (true) {
-            //         const { value, done } = await reader.read();
-            //         if (done) break;
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
 
-            //         partialData += decoder.decode(value, { stream: true });
-            //         const dataBlocks = partialData.split("\n\n");
+                    partialData += decoder.decode(value, { stream: true });
+                    const dataBlocks = partialData.split("\n\n");
 
-            //         for (let i = 0; i < dataBlocks.length - 1; i++) {
-            //             const block = dataBlocks[i];
-            //             if (block.startsWith("data: ")) {
-            //                 const jsonString = block.substring(6);
-            //                 try {
-            //                     const event = JSON.parse(jsonString);
-            //                     setAnswers(prevAnswers => {
-            //                         const newAnswers = [...prevAnswers];
-            //                         const lastAnswer = newAnswers[newAnswers.length - 1].answer;
-            //                         if (event.content) {
-            //                             lastAnswer.message.content += event.content;
-            //                         }
-            //                         if (event.context) {
-            //                             lastAnswer.context = { ...lastAnswer.context, ...event.context };
-            //                         }
-            //                         if (event.session_state) {
-            //                             lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
-            //                         }
-            //                         return newAnswers;
-            //                     });
-            //                 } catch (e) {
-            //                     console.error("Failed to parse stream data:", jsonString, e);
-            //                 }
-            //             }
-            //         }
-            //         partialData = dataBlocks[dataBlocks.length - 1];
-            //     }
-            //     finalAnswer =  { ...initialResponse };
-            // } else {
+                    for (let i = 0; i < dataBlocks.length - 1; i++) {
+                        const block = dataBlocks[i];
+                        if (block.startsWith("data: ")) {
+                            const jsonString = block.substring(6);
+                            try {
+                                const event = JSON.parse(jsonString);
+                                setAnswers(prevAnswers => {
+                                    const newAnswers = [...prevAnswers];
+                                    const lastAnswer = newAnswers[newAnswers.length - 1].answer;
+                                    if (event.content) {
+                                        lastAnswer.message.content += event.content;
+                                    }
+                                    if (event.context) {
+                                        lastAnswer.context = { ...lastAnswer.context, ...event.context };
+                                    }
+                                    if (event.session_state) {
+                                        lastAnswer.session_state = { ...(lastAnswer.session_state || {}), ...event.session_state };
+                                    }
+                                    return newAnswers;
+                                });
+                            } catch (e) {
+                                console.error("Failed to parse stream data:", jsonString, e);
+                            }
+                        }
+                    }
+                    partialData = dataBlocks[dataBlocks.length - 1];
+                }
+                finalAnswer =  { ...initialResponse };
+            } else {
 // ===============================================================================================
 
                 // --- 非ストリーミング処理 ---
@@ -324,7 +336,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
                 };
 // ===============================================================================================
 //  以下ストリーミング回答用
-            // }
+            }
 // ===============================================================================================
 
             await saveConversation(question, finalAnswer);
@@ -357,7 +369,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
         navigate("/");
     };
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         console.log("【3. Chat 検証】スクロールターゲットを探すuseEffectが実行されました。targetId:", targetId);
 
         // targetQuestion があり、answersがセットされた後に実行
@@ -373,7 +385,7 @@ const [answers, setAnswers] = useState<ConversationTurn[]>(() => {
     }, [targetId]); // answersとtargetQuestionが変わった時に実行
 
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (scrollToId) {
             const element = document.getElementById(`message-${scrollToId}`);
             if (element) {
