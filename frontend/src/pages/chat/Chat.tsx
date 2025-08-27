@@ -261,7 +261,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
 
             if (!response.ok) {
                 const errorBody = await response.text();
-                throw new Error(`API error: ${response.status} ${response.statusText} | Body: ${errorBody}`);
+                throw new Error(errorBody); 
             }
 
             if (!response.body) {
