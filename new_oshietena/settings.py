@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-&h--6d#b@l^4w9)*!q=jsdq12s$k00_70#mwnt+b!&^afsl2m_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net','localhost', '127.0.0.1']
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
