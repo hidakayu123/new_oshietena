@@ -15,7 +15,7 @@ from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
 from app.ai_search_service import process_target_index, summarize_vector_results
 from app.save_chat import create_new_conversation
 from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
-
+from django.views.generic import TemplateView
 import traceback
 from django.conf import settings
 ERROR_MESSAGES_PATH = os.path.join(settings.BASE_DIR, "frontend/src/locales/ja/translation.json")
@@ -25,6 +25,9 @@ try:
         ERROR_MESSAGES = json.load(f)
 except Exception as e:
     ERROR_MESSAGES = {}
+
+class FrontendAppView(TemplateView):
+    template_name = "index.html"
 
 
 class ChatView(APIView):
