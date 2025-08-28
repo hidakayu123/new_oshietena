@@ -110,7 +110,7 @@ class ChatHistoryView(APIView):
                     return Response({"error": "指定されたチャットは見つかりませんでした"}, status=status.HTTP_404_NOT_FOUND)
             else:
                 # 履歴全件取得（従来どおり）
-                history_items = fetch_history_for_user(user_id)
+                history_items = fetch_history_for_user(user_id, history_box_id)
                 return Response(history_items, status=status.HTTP_200_OK)
         except Exception as e:
             print("🔥 get() で例外:", e)
