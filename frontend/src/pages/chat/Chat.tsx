@@ -45,6 +45,7 @@ import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from "react-router-dom";
 import { ConversationTurn, InitialAnswerRaw } from "../../api";
+import  SimpleModal   from "./SimpleModal";
 
 interface ChatProps {
   initialAnswers?: InitialAnswerRaw[];
@@ -139,6 +140,12 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const audio = useRef(new Audio()).current;
     const [isPlaying, setIsPlaying] = useState(false);
     const { instance } = useMsal();
+    // state定義（親コンポーネント内）
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalContent, setModalContent] = useState({ title: ""});
+
+    // モーダルを閉じる関数
+    const hideModal = () => setModalVisible(false);
     const speechConfig: SpeechConfig = {
         speechUrls,
         setSpeechUrls,
@@ -257,16 +264,14 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
             };
 
             // 3. API呼び出しとレスポンス処理
-            const response = await chatApi(request, token);
+                const response = await chatApi(request, token);
 
-            if (!response.ok) {
-                const errorBody = await response.text();
-                throw new Error(errorBody); 
-            }
-
-            if (!response.body) {
-                throw new Error("Response body is null");
-            }
+                if (!response.ok) {
+                        const errorBody = await response.json();
+                        const error = new Error();
+                        (error as any).code = errorBody.error || "unknown_error";
+                        throw error;
+                    }
 
             let finalAnswer: ChatAppResponse;
 
@@ -340,16 +345,27 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
 // ===============================================================================================
 
             await saveConversation(question, finalAnswer);
-        } catch (e) {
-        // 4. エラーハンドリング
-            const err = e as Error;
-            setError(err);
-            // エラーが発生した場合、最後の回答欄にエラーメッセージを表示する
-            setAnswers(prevAnswers => {
-                const newAnswers = [...prevAnswers];
-                newAnswers[newAnswers.length - 1].answer.message.content = "エラーが発生しました: " + err.message;
-                return newAnswers;
-            });
+        } catch (e: any) {
+            if (e.code === "rate_limit") {
+                setModalContent({
+                    title: "利用上限に達しました",
+                });
+                setModalVisible(true);
+                setAnswers(prevAnswers => {
+                    const newAnswers = [...prevAnswers];
+                    newAnswers[newAnswers.length - 1].answer.message.content = "利用上限に達しました";
+                    return newAnswers;})
+            } else {
+                console.error("チャットAPIエラー:", e);
+            
+                setError(e);
+                // エラーが発生した場合、最後の回答欄にエラーメッセージを表示する
+                setAnswers(prevAnswers => {
+                    const newAnswers = [...prevAnswers];
+                    newAnswers[newAnswers.length - 1].answer.message.content = "エラーが発生しました: " + e.message;
+                    return newAnswers;
+                });
+            }
         } finally {
             // 5. 最終処理
             setIsLoading(false);
@@ -671,6 +687,14 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                     {useLogin && <TokenClaimsDisplay />}
                 </Panel> */}
             </div>
+            {/* モーダル */}
+            {modalVisible && (
+                <SimpleModal
+                visible={modalVisible} 
+                title={modalContent.title}
+                onOk={hideModal}
+                />
+            )}
         </div>
         
     );

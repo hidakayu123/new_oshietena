@@ -64,12 +64,10 @@ class ChatView(APIView):
             # メッセージに "quota" という単語が含まれているか確認
             if "quota" in str(e).lower():
                 print(f"✅ クォータ上限エラー(403)を検出しました: {e}")
-                message = ERROR_MESSAGES.get("rate_limit", "利用回数上限に達しました。")
                 # 画面には「利用回数上限」メッセージを返す
-                return HttpResponse(
-                    message,
-                    status=429, # クライアントには429を返すのが親切
-                    content_type="text/plain; charset=utf-8"
+                return JsonResponse(
+                    {"error": "rate_limit"},
+                    status=429
                 )
             else:
                 # "quota" を含まない、純粋な権限エラーの場合
