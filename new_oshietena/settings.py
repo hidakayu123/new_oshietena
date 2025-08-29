@@ -68,7 +68,7 @@ ROOT_URLCONF = 'new_oshietena.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'new_oshietena' / 'templates'],
+        'DIRS': [BASE_DIR / 'new_oshietena/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
