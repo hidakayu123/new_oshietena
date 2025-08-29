@@ -1,3 +1,4 @@
+import React from 'react';
 import { Delete24Regular } from "@fluentui/react-icons";
 import { Button } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";

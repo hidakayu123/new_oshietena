@@ -109,7 +109,7 @@ export async function listUploadedFilesApi(idToken: string): Promise<string[]> {
     if (!response.ok) {
         throw new Error(`Listing files failed: ${response.statusText}`);
     }
-console.log(response);
+    console.log(response);
     const dataResponse: string[] = await response.json();
     return dataResponse;
 }

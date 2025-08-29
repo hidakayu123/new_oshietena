@@ -1,3 +1,4 @@
+import React from 'react';
 import { useMemo, useState } from "react";
 import { Stack, IconButton } from "@fluentui/react";
 import { useTranslation } from "react-i18next";
@@ -10,8 +11,6 @@ import styles from "./Answer.module.css";
 import { ChatAppResponse, getCitationFilePath, SpeechConfig } from "../../api";
 import { parseAnswerToHtml } from "./AnswerParser";
 import { AnswerIcon } from "./AnswerIcon";
-import { SpeechOutputBrowser } from "./SpeechOutputBrowser";
-import { SpeechOutputAzure } from "./SpeechOutputAzure";
 
 interface Props {
     answer: ChatAppResponse;

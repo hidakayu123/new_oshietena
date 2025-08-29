@@ -1,3 +1,4 @@
+import React from 'react';
 import { renderToStaticMarkup } from "react-dom/server";
 import { ChatAppResponse, getCitationFilePath } from "../../api";
 
@@ -30,8 +31,8 @@ function isCitationValid(contextDataPoints: any, citationCandidate: string): boo
     return isValidCitation;
 }
 
-export function parseAnswerToHtml(answer: ChatAppResponse, isStreaming: boolean, onCitationClicked: (citationFilePath: string) => void): HtmlParsedAnswer {
-    const contextDataPoints = answer.context.data_points;
+export function parseAnswerToHtml(answer: ChatAppResponse, isStreaming: boolean): HtmlParsedAnswer {
+    const contextDataPoints = answer.context;
     const citations: string[] = [];
 
     // Trim any whitespace from the end of the answer after removing follow-up questions
@@ -74,7 +75,7 @@ export function parseAnswerToHtml(answer: ChatAppResponse, isStreaming: boolean,
             const path = getCitationFilePath(part);
 
             return renderToStaticMarkup(
-                <a className="supContainer" title={part} onClick={() => onCitationClicked(path)}>
+                <a className="supContainer" title={part}>
                     <sup>{citationIndex}</sup>
                 </a>
             );

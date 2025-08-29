@@ -1,3 +1,4 @@
+import React from 'react';
 import styles from "./UserChatMessage.module.css";
 
 export const UserChatMessage = ({ message, id }: { message: string, id: string }) => {

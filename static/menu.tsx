@@ -155,37 +155,6 @@ const SidebarMenu: React.FC<Props> = () => {
     setIsMenuOpen(false);     // メニューを閉じる（任意）
   };
 
-  
-  // const onSelectChat = async (id: string) => {
-  // setSelectedChatId(id);
-  // setIsChatLoading(true);
-
-  //   try {
-  //     const dbToken = client ? await getToken(client) : undefined;
-
-  //     const response = await fetch(`/api/history/${id}/`, {
-  //       method: "GET",
-  //       headers: {
-  //         Authorization: `Bearer ${dbToken}`,
-  //         'Content-Type': 'application/json',
-  //       },
-  //     });
-
-  //     const data = await response.json();
-
-  //     if (!response.ok) throw new Error("Failed to fetch chat detail");
-
-  //     setSelectedChatDetail(data);  // ← 取得データを保存
-
-  //   } catch (e) {
-  //     console.error(e);
-  //     setSelectedChatDetail(null);  // ← エラー時はnull
-  //   } finally {
-  //     setIsChatLoading(false);
-  //   }
-  // };
-
-
   // --- メニューUI ---
   return (
     <>
