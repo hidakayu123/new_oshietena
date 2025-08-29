@@ -33,8 +33,8 @@ DEBUG = False
 ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173', # localhostの別名も念のため追加
+    # 'http://localhost:5173',
+    # 'http://127.0.0.1:5173', # localhostの別名も念のため追加
     'https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net',
 ]
 
@@ -144,8 +144,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 特定のオリジンのみを許可
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Viteのローカル開発サーバー
-    "http://127.0.0.1:5173",
+    # "http://localhost:5173",  # Viteのローカル開発サーバー
+    # "http://127.0.0.1:5173",
     # "https://your-production-frontend.com", # 将来の本番ドメイン
     "https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net",
 ]

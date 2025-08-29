@@ -121,7 +121,7 @@ export const msalConfig: Configuration = {
     auth: {
         clientId: CLIENTID,
         authority: `https://login.microsoftonline.com/${TENANTID}`, 
-        redirectUri: "http://localhost:5173",
+        redirectUri: "https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net",
         navigateToLoginRequestUrl: false
     },
     cache: {
