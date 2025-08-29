@@ -15,7 +15,7 @@ from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
 from app.ai_search_service import process_target_index, summarize_vector_results
 from app.save_chat import create_new_conversation
 from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
-
+from django.views.generic import TemplateView
 import traceback
 from django.conf import settings
 ERROR_MESSAGES_PATH = os.path.join(settings.BASE_DIR, "frontend/src/locales/ja/translation.json")
@@ -25,6 +25,9 @@ try:
         ERROR_MESSAGES = json.load(f)
 except Exception as e:
     ERROR_MESSAGES = {}
+
+class FrontendAppView(TemplateView):
+    template_name = "index.html"
 
 
 class ChatView(APIView):
@@ -36,6 +39,7 @@ class ChatView(APIView):
         try:
             messages = request.data.get("messages", [])
             target_index = request.auth.get('oid')
+            auth_header = request.headers.get('Authorization')
             if not messages:
                 return Response({"error": "messages field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -54,55 +58,32 @@ class ChatView(APIView):
                     "role": "system",
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
-                response = handle_chatbot_response(messages)
-        #         content = response.choices[0].message.content
-        #         return JsonResponse({
-        #             "message": {
-        #                 "content": content,
-        #                 "role": "assistant"
-        #             },
-        #             "context": {
-        #                 "data_points": [],
-        #                 "followup_questions": [],
-        #                 "thoughts": []
-        #             },
-        #             "session_state": "",
-        #             "delta": "" 
-        #         })
-        # # 1. OpenAIのレート制限・クォータ上限エラーを具体的にキャッチする
-        # except openai.PermissionDeniedError as e:
-        #     # メッセージに "quota" という単語が含まれているか確認
-        #     if "quota" in str(e).lower():
-        #         print(f"✅ クォータ上限エラー(403)を検出しました: {e}")
-        #         message = ERROR_MESSAGES.get("rate_limit", "利用回数上限に達しました。")
-        #         # 画面には「利用回数上限」メッセージを返す
-        #         return HttpResponse(
-        #             message,
-        #             status=429, # クライアントには429を返すのが親切
-        #             content_type="text/plain; charset=utf-8"
-        #         )
-        #     else:
-        #         # "quota" を含まない、純粋な権限エラーの場合
-        #         print(f"❌ 権限エラー: {e}")
-        #         return HttpResponse(
-        #             "APIへのアクセス権限がありません。",
-        #             status=403,
-        #             content_type="text/plain; charset=utf-8"
-        #         )
-        # # 2. その他の予期せぬエラーを汎用的にキャッチする
-        # except Exception as e:
-        #     return JsonResponse(
-        #         {"error": "内部エラー"},
-        #         status=500,
-        #         json_dumps_params={'ensure_ascii': False}
-        #     )
-        #===============================================================================================
-            # 以下ストリーミング回答用
-            return StreamingHttpResponse(
+                response = handle_chatbot_response(messages, auth_header)
+                return StreamingHttpResponse(
                 stream_chatbot_response(messages, response),
                 content_type="text/event-stream",
             )
+        except openai.PermissionDeniedError as e:
+            # メッセージに "quota" という単語が含まれているか確認
+            if "quota" in str(e).lower():
+                print(f"✅ クォータ上限エラー(403)を検出しました: {e}")
+                # 画面には「利用回数上限」メッセージを返す
+                return JsonResponse(
+                    {"error": "rate_limit"},
+                    status=429
+                )
+            else:
+                # "quota" を含まない、純粋な権限エラーの場合
+                print(f"❌ 権限エラー: {e}")
+                return HttpResponse(
+                    "APIへのアクセス権限がありません。",
+                    status=403,
+                    content_type="text/plain; charset=utf-8"
+                )
+
         except Exception as e:
+            # その他の予期せぬエラー
+            print(f"💥 予期せぬエラー: {e}")
             return Response({"error": f"Chat processing error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         #===============================================================================================
 
@@ -130,7 +111,7 @@ class ChatHistoryView(APIView):
                     return Response({"error": "指定されたチャットは見つかりませんでした"}, status=status.HTTP_404_NOT_FOUND)
             else:
                 # 履歴全件取得（従来どおり）
-                history_items = fetch_history_for_user(user_id)
+                history_items = fetch_history_for_user(user_id, history_box_id)
                 return Response(history_items, status=status.HTTP_200_OK)
         except Exception as e:
             print("🔥 get() で例外:", e)

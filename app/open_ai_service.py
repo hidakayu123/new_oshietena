@@ -14,14 +14,14 @@ APIM_SUBSCRIPTION_KEY = os.environ.get("APIM_SUBSCRIPTION_KEY")
 # AzureOpenAIクライアントを初期化するための設定辞書
 openai_client_config = {
     "azure_endpoint": AZURE_OPENAI_ENDPOINT,
-    "api_key": AZURE_OPENAI_KEY,
+    "api_key": "dummy-key",
     "api_version": AZURE_OPENAI_API_VERSION,
     "default_headers": {"Ocp-Apim-Subscription-Key": APIM_SUBSCRIPTION_KEY},
 }
 client = AzureOpenAI(**openai_client_config)
 deployment = DEPLOYMENT
 
-def handle_chatbot_response(messages):
+def handle_chatbot_response(messages, auth_header):
     
     kwargs = {
         "messages": messages,
@@ -29,6 +29,9 @@ def handle_chatbot_response(messages):
         # "stream": False,
         "stream": True,   
         "temperature": 0,
+        "extra_headers": {
+            "Authorization": auth_header
+        }
     }
     response = client.chat.completions.create(**kwargs)
     return response

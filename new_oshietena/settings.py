@@ -29,11 +29,13 @@ SECRET_KEY = 'django-insecure-&h--6d#b@l^4w9)*!q=jsdq12s$k00_70#mwnt+b!&^afsl2m_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# ALLOWED_HOSTS = ['oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net','localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
-    'http://127.0.0.1:5173' # localhostの別名も念のため追加
+    'http://127.0.0.1:5173', # localhostの別名も念のため追加
+    'https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net',
 ]
 
 # Application definition
@@ -66,7 +68,7 @@ ROOT_URLCONF = 'new_oshietena.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'new_oshietena' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -142,6 +144,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Viteのローカル開発サーバー
     "http://127.0.0.1:5173",
     # "https://your-production-frontend.com", # 将来の本番ドメイン
+    "https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net",
 ]
 
 LOGGING = {

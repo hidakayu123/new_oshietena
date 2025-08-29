@@ -20,8 +20,10 @@ from new_oshietena import views
 from app.chat_count import ChatCountView
 from django.urls import path
 from .views import ChatView, ChatHistoryView, auth_setup, get_csrf_token
+from .views import FrontendAppView
 
 urlpatterns = [
+    path("", FrontendAppView.as_view()),
     path('api/admin/', admin.site.urls),
     path('api/auth_setup/', auth_setup, name='auth_setup'),
     path('api/chat/', ChatView.as_view(), name='chat'),    

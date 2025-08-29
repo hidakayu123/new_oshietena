@@ -18,7 +18,7 @@ except Exception as e:
     container = None
 
 
-def fetch_history_for_user(user_id: str) -> list:
+def fetch_history_for_user(user_id: str, history_box_id) -> list:
     """
     指定されたユーザーのチャット履歴（IDとタイトル）をデータベースから取得します。
 
@@ -33,24 +33,72 @@ def fetch_history_for_user(user_id: str) -> list:
     """
     if not container:
         raise Exception("Database connection is not available.")
+    
+    # --- ステップ1: 各グループの最も古い日時を取得するクエリを実行 ---
+    query_step1 = """
+    SELECT c.id, c.title, c.historyBoxId, c.createdAt
+    FROM c
+    WHERE c.userId = @userid
+    AND NOT IS_DEFINED(c.AvailableTerm)
+    """
 
-    query = """
+    parameters_step1 = [
+        {"name": "@userid", "value": user_id}
+    ]
+
+    results_step1 = list(
+        container.query_items(
+            query=query_step1,
+            parameters=parameters_step1,
+            enable_cross_partition_query=True
+        )
+    )
+
+    # ステップ1で結果がなければ、空のリストを返す
+    if not results_step1:
+        return []
+
+    # historyBoxId ごとに最古の createdAt を探す
+    history_box_map = {}
+
+    for item in results_step1:
+        if "historyBoxId" not in item or "createdAt" not in item:
+            continue
+        box_id = item["historyBoxId"]
+        created_at = item["createdAt"]
+
+        if box_id not in history_box_map or created_at < history_box_map[box_id]["createdAt"]:
+            history_box_map[box_id] = {
+                "createdAt": created_at,  # 元の文字列も保持
+            }
+
+    # --- ステップ2: 最古の createdAt に一致するドキュメントを取得 ---
+    where_clauses = []
+    for box_id, info in history_box_map.items():
+        clause = f'(c.historyBoxId = "{box_id}" AND c.createdAt = "{info["createdAt"]}")'
+        where_clauses.append(clause)
+
+    filter_condition = " OR ".join(where_clauses)
+
+    query_step2 = f"""
     SELECT c.id, c.title, c.historyBoxId
     FROM c
     WHERE c.userId = @userid
     AND NOT IS_DEFINED(c.AvailableTerm)
+    AND ({filter_condition})
     ORDER BY c.createdAt DESC
     """
 
-    parameters = [{"name": "@userid", "value": user_id}]
+    parameters_step2 = [
+        {"name": "@userid", "value": user_id}
+    ]
 
     try:
         items = list(
             container.query_items(
-                query=query,
-                parameters=parameters,
-                # enable_cross_partition_query=True,
-                partition_key=user_id  
+                query=query_step2,
+                parameters=parameters_step2,
+                partition_key=user_id
             )
         )
         return items
