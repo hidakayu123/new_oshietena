@@ -7,8 +7,9 @@ export default defineConfig({
     resolve: {
         preserveSymlinks: true
     },
+    base: '/static/',
     build: {
-        outDir: "../new_oshietena/static",
+        outDir: 'build',
         emptyOutDir: true,
         sourcemap: true,
         rollupOptions: {
