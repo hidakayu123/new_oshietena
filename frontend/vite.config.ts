@@ -7,7 +7,7 @@ export default defineConfig({
     resolve: {
         preserveSymlinks: true
     },
-    base: '/static/',
+    base: '/build/',
     build: {
         outDir: 'build',
         emptyOutDir: true,
