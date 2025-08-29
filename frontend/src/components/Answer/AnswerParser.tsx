@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from "react-dom/server";
-import { ChatAppResponse, getCitationFilePath } from "../../api";
+import { ChatAppResponse } from "../../api";
 
 type HtmlParsedAnswer = {
     answerHtml: string;
@@ -71,8 +71,6 @@ export function parseAnswerToHtml(answer: ChatAppResponse, isStreaming: boolean)
                 citations.push(part);
                 citationIndex = citations.length;
             }
-
-            const path = getCitationFilePath(part);
 
             return renderToStaticMarkup(
                 <a className="supContainer" title={part}>

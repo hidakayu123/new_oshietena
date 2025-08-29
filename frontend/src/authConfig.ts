@@ -87,6 +87,7 @@ const getAppServicesToken = (): Promise<AppServicesToken | null> => {
     if (globalThis.cachedAppServicesToken && checkNotExpired(globalThis.cachedAppServicesToken)) {
         return Promise.resolve(globalThis.cachedAppServicesToken);
     }
+    return Promise.resolve(null);
 };
 
 export const isUsingAppServicesLogin = (await getAppServicesToken()) != null;

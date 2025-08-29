@@ -30,7 +30,7 @@ import { useLogin, getToken, requireAccessControl } from "../../authConfig";
 import { useMsal } from "@azure/msal-react";
 import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { LoginContext } from "../../loginContext";
-import Sidebarmenu from '../../../../static/menu.js';
+import Sidebarmenu from '../../components/menu/menu';
 import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
@@ -110,7 +110,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
     const [error, setError] = useState<unknown>();
     const [activeCitation, setActiveCitation] = useState<string>();
-    const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
+    // const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
     const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
     const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
@@ -157,7 +157,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         error && setError(undefined);
         setIsLoading(true);
         setActiveCitation(undefined);
-        setActiveAnalysisPanelTab(undefined);
+        // setActiveAnalysisPanelTab(undefined);
 
         // 最初にユーザーの質問と、空の回答欄をUIに追加する
         // これにより、ユーザーは即座にフィードバックを得られる
@@ -240,8 +240,8 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                         conversationId: conversationId,
                         question: question,
                         answer: answer,
-                        historyBoxId: localHistoryBoxId,
-                    }, dbToken ?? null);
+                        historyBoxId: localHistoryBoxId ?? undefined,
+                    }, dbToken);
 
                     console.log("会話が正常にDBへ保存されました。");
                 } catch (error) {
@@ -250,14 +250,17 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
             };
 
             // 3. API呼び出しとレスポンス処理
-                const response = await chatApi(request, token);
+                const response = await chatApi(request, token ?? null);
 
                 if (!response.ok) {
-                        const errorBody = await response.json();
-                        const error = new Error();
-                        (error as any).code = errorBody.error || "unknown_error";
-                        throw error;
-                    }
+                    const errorBody = await response.json();
+                    const error = new Error();
+                    (error as any).code = errorBody.error || "unknown_error";
+                    throw error;
+                }
+                if (!response.body) {
+                    throw new Error("Response body is null");
+                }
 
             let finalAnswer: ChatAppResponse;
 
@@ -323,7 +326,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                 const token = client ? await getToken(client) : undefined;
                 const historyForManager = answers.map(turn => [turn.question, turn.answer] as [string, ChatAppResponse]);
-                historyManager.addItem(parsedResponse.session_state, [...historyForManager, [question, parsedResponse]], token);
+                // historyManager.addItem(parsedResponse.session_state, [...historyForManager, [question, parsedResponse]], token);
                 };
 // ===============================================================================================
 //  以下ストリーミング回答用
@@ -362,7 +365,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         lastQuestionRef.current = "";
         error && setError(undefined);
         setActiveCitation(undefined);
-        setActiveAnalysisPanelTab(undefined);
+        // setActiveAnalysisPanelTab(undefined);
         setAnswers([]);
         setSpeechUrls([]);
         // setStreamedAnswers([]);
@@ -397,25 +400,25 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         }
     }, [answers, scrollToId]);
 
-    const onShowCitation = (citation: string, index: number) => {
-        if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
-            setActiveAnalysisPanelTab(undefined);
-        } else {
-            setActiveCitation(citation);
-            setActiveAnalysisPanelTab(AnalysisPanelTabs.CitationTab);
-        }
+    // const onShowCitation = (citation: string, index: number) => {
+    //     if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
+    //         setActiveAnalysisPanelTab(undefined);
+    //     } else {
+    //         setActiveCitation(citation);
+    //         setActiveAnalysisPanelTab(AnalysisPanelTabs.CitationTab);
+    //     }
 
-        setSelectedAnswer(index);
-    };
-    const onToggleTab = (tab: AnalysisPanelTabs, index: number) => {
-        if (activeAnalysisPanelTab === tab && selectedAnswer === index) {
-            setActiveAnalysisPanelTab(undefined);
-        } else {
-            setActiveAnalysisPanelTab(tab);
-        }
+    //     setSelectedAnswer(index);
+    // };
+    // const onToggleTab = (tab: AnalysisPanelTabs, index: number) => {
+    //     if (activeAnalysisPanelTab === tab && selectedAnswer === index) {
+    //         setActiveAnalysisPanelTab(undefined);
+    //     } else {
+    //         setActiveAnalysisPanelTab(tab);
+    //     }
 
-        setSelectedAnswer(index);
-    };
+    //     setSelectedAnswer(index);
+    // };
     const { t, i18n } = useTranslation();
 
 
@@ -433,7 +436,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 </div>
                 <div className={styles.commandsContainer}>
                     <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
-                    {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
+                    {/* {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />} */}
                     {/* <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} /> */}
                 </div>
             </div>
@@ -446,7 +449,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
 
                             <h1 className={styles.chatEmptyStateTitle}>{t("chatEmptyStateTitle")}</h1>
                             {/* <h2 className={styles.chatEmptyStateSubtitle}>{t("chatEmptyStateSubtitle")}</h2> */}
-                            {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
+                            {/* {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />} */}
 
                             {/* <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} /> */}
                         </div>
@@ -475,14 +478,14 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                                                     answer={turn.answer}
                                                     index={index}
                                                     speechConfig={speechConfig}
-                                                    isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
-                                                    onCitationClicked={c => onShowCitation(c, index)}
-                                                    onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                                    onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                                    onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                                    showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                                    showSpeechOutputAzure={showSpeechOutputAzure}
-                                                    showSpeechOutputBrowser={showSpeechOutputBrowser}
+                                                    // isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
+                                                    // onCitationClicked={c => onShowCitation(c, index)}
+                                                    // onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
+                                                    // onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
+                                                    // onFollowupQuestionClicked={q => makeApiRequest(q)}
+                                                    // showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
+                                                    // showSpeechOutputAzure={showSpeechOutputAzure}
+                                                    // showSpeechOutputBrowser={showSpeechOutputBrowser}
                                                 />
                                             )}
                                         </div>
