@@ -5,11 +5,13 @@ import { getToken, useLogin } from "../../authConfig";
 import { useNavigate } from "react-router-dom"; 
 
 // 型定義
-type Props = {};
+type Props = {
+  onNewChat: () => void;
+};
 type UsageResponse = { count?: number | null; limit: number };
 type ChatHistoryItem = { id: string; title: string; historyBoxId: string;};
 
-const SidebarMenu: React.FC<Props> = () => {
+export const Sidebarmenu = ({ onNewChat }: Props) => {
   const navigate = useNavigate();
   const onSelectChat = (id: string) => {
       // 1. クリックされたIDを元に、history配列から該当するアイテムを探します
@@ -151,8 +153,9 @@ const SidebarMenu: React.FC<Props> = () => {
   };
 
   const handleNewChat = () => {
-    navigate("/");        // ← ここで新しいチャット画面に遷移
-    setIsMenuOpen(false);     // メニューを閉じる（任意）
+        // ここで親から渡された関数を実行する
+        onNewChat();
+        setIsMenuOpen(false);   
   };
 
   // --- メニューUI ---

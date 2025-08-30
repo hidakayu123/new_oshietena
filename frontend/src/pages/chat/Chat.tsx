@@ -1,11 +1,7 @@
 import React from 'react';
-//import { useAppAuth } from '../../AuthHandler'; 
 import { useRef, useState, useEffect, useContext, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
-import { Panel, DefaultButton } from "@fluentui/react";
-import readNDJSONStream from "ndjson-readablestream";
-
 import appLogo from "../../assets/applogo.svg";
 import styles from "./Chat.module.css";
 import { saveConversationToDb } from "../../api";
@@ -15,9 +11,7 @@ import {
     // configApi,
     RetrievalMode,
     ChatAppResponse,
-    ChatAppResponseOrError,
     ChatAppRequest,
-    ResponseMessage,
     VectorFields,
     GPT4VInput,
     SpeechConfig
@@ -28,10 +22,8 @@ import { UserChatMessage } from "../../components/UserChatMessage";
 import { ClearChatButton } from "../../components/ClearChatButton";
 import { useLogin, getToken, requireAccessControl } from "../../authConfig";
 import { useMsal } from "@azure/msal-react";
-import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { LoginContext } from "../../loginContext";
-import Sidebarmenu from '../../components/menu/menu';
-import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
+import Sidebarmenu from '../../components/menu/menu';  
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from "react-router-dom";
@@ -80,7 +72,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         console.info(answers)
     
     const [scrollToId, setScrollToId] = useState<string | null>(null);
-    const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
     const [promptTemplate, setPromptTemplate] = useState<string>("");
     const [temperature, setTemperature] = useState<number>(0.3);
@@ -94,7 +85,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
     const [useQueryRewriting, setUseQueryRewriting] = useState<boolean>(false);
     const [reasoningEffort, setReasoningEffort] = useState<string>("");
-    const [streamingEnabled, setStreamingEnabled] = useState<boolean>(true);
     const [shouldStream, setShouldStream] = useState<boolean>(true);
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
     const [includeCategory, setIncludeCategory] = useState<string>("");
@@ -109,23 +99,8 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
     const [error, setError] = useState<unknown>();
-    const [activeCitation, setActiveCitation] = useState<string>();
-    // const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
-    const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
     const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
-    const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
-    const [showSemanticRankerOption, setShowSemanticRankerOption] = useState<boolean>(false);
-    const [showQueryRewritingOption, setShowQueryRewritingOption] = useState<boolean>(false);
-    const [showReasoningEffortOption, setShowReasoningEffortOption] = useState<boolean>(false);
-    const [showVectorOption, setShowVectorOption] = useState<boolean>(false);
-    const [showUserUpload, setShowUserUpload] = useState<boolean>(false);
-    const [showLanguagePicker, setshowLanguagePicker] = useState<boolean>(false);
     const [showSpeechInput, setShowSpeechInput] = useState<boolean>(false);
-    const [showSpeechOutputBrowser, setShowSpeechOutputBrowser] = useState<boolean>(false);
-    const [showSpeechOutputAzure, setShowSpeechOutputAzure] = useState<boolean>(false);
-    const [showChatHistoryBrowser, setShowChatHistoryBrowser] = useState<boolean>(false);
-    const [showChatHistoryCosmos, setShowChatHistoryCosmos] = useState<boolean>(false);
-    const [showAgenticRetrievalOption, setShowAgenticRetrievalOption] = useState<boolean>(false);
     const [useAgenticRetrieval, setUseAgenticRetrieval] = useState<boolean>(false);
     const navigate = useNavigate();
     const audio = useRef(new Audio()).current;
@@ -400,47 +375,22 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         }
     }, [answers, scrollToId]);
 
-    // const onShowCitation = (citation: string, index: number) => {
-    //     if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
-    //         setActiveAnalysisPanelTab(undefined);
-    //     } else {
-    //         setActiveCitation(citation);
-    //         setActiveAnalysisPanelTab(AnalysisPanelTabs.CitationTab);
-    //     }
-
-    //     setSelectedAnswer(index);
-    // };
-    // const onToggleTab = (tab: AnalysisPanelTabs, index: number) => {
-    //     if (activeAnalysisPanelTab === tab && selectedAnswer === index) {
-    //         setActiveAnalysisPanelTab(undefined);
-    //     } else {
-    //         setActiveAnalysisPanelTab(tab);
-    //     }
-
-    //     setSelectedAnswer(index);
-    // };
     const { t, i18n } = useTranslation();
 
 
     return (
         <div className={styles.container}>
-            {/* Setting the page title using react-helmet-async */}
             <Helmet>
                 <title>{t("pageTitle")}</title>
             </Helmet>
             <div className={styles.commandsSplitContainer}>
                 <div className={styles.commandsContainer}>
-                    {/* {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
-                        <HistoryButton className={styles.commandButton} onClick={() => setIsHistoryPanelOpen(!isHistoryPanelOpen)} />
-                    )} */}
                 </div>
                 <div className={styles.commandsContainer}>
                     <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
-                    {/* {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />} */}
-                    {/* <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} /> */}
                 </div>
             </div>
-            <Sidebarmenu/>
+            <Sidebarmenu onNewChat={clearChat} /> 
             <div className={styles.chatRoot} style={{ marginLeft: isHistoryPanelOpen ? "300px" : "0" }}>
                 <div className={styles.chatContainer}>
                     {!lastQuestionRef.current ? (
@@ -448,10 +398,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                             <img src={appLogo} alt="App logo" width="120" height="120" />
 
                             <h1 className={styles.chatEmptyStateTitle}>{t("chatEmptyStateTitle")}</h1>
-                            {/* <h2 className={styles.chatEmptyStateSubtitle}>{t("chatEmptyStateSubtitle")}</h2> */}
-                            {/* {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />} */}
-
-                            {/* <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} /> */}
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
@@ -478,14 +424,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                                                     answer={turn.answer}
                                                     index={index}
                                                     speechConfig={speechConfig}
-                                                    // isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
-                                                    // onCitationClicked={c => onShowCitation(c, index)}
-                                                    // onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                                    // onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                                    // onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                                    // showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                                    // showSpeechOutputAzure={showSpeechOutputAzure}
-                                                    // showSpeechOutputBrowser={showSpeechOutputBrowser}
                                                 />
                                             )}
                                         </div>
