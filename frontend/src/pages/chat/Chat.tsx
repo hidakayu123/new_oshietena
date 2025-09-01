@@ -39,7 +39,7 @@ import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { LoginContext } from "../../loginContext";
 import { LanguagePicker } from "../../i18n/LanguagePicker";
 import { Settings } from "../../components/Settings/Settings";
-import Sidebarmenu from '../../../../static/menu.js';
+import Sidebarmenu from '../../../../static/menu';
 import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
@@ -530,7 +530,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                     {/* <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} /> */}
                 </div>
             </div>
-            <Sidebarmenu/>
+            <Sidebarmenu onNewChat={clearChat} /> 
             <div className={styles.chatRoot} style={{ marginLeft: isHistoryPanelOpen ? "300px" : "0" }}>
                 <div className={styles.chatContainer}>
                     {!lastQuestionRef.current ? (

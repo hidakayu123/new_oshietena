@@ -3,13 +3,17 @@ import './menu.css';
 import { useMsal } from "@azure/msal-react";
 import { getToken, useLogin } from "../frontend/src/authConfig";
 import { useNavigate } from "react-router-dom"; 
+// menu.tsx の上部
 
+// './SidebarMenu' の部分は、実際のファイルパスに合わせて修正してください。
 // 型定義
-type Props = {};
+type Props = {
+  onNewChat: () => void;
+};
 type UsageResponse = { count?: number | null; limit: number };
 type ChatHistoryItem = { id: string; title: string; historyBoxId: string;};
 
-const SidebarMenu: React.FC<Props> = () => {
+export const SidebarMenu = ({ onNewChat }: Props) => {
   const navigate = useNavigate();
   const onSelectChat = (id: string) => {
       // 1. クリックされたIDを元に、history配列から該当するアイテムを探します
@@ -151,41 +155,12 @@ const SidebarMenu: React.FC<Props> = () => {
   };
 
   const handleNewChat = () => {
-    navigate("/");        // ← ここで新しいチャット画面に遷移
-    setIsMenuOpen(false);     // メニューを閉じる（任意）
+        // ここで親から渡された関数を実行する
+        onNewChat();
+        setIsMenuOpen(false);   
   };
 
   
-  // const onSelectChat = async (id: string) => {
-  // setSelectedChatId(id);
-  // setIsChatLoading(true);
-
-  //   try {
-  //     const dbToken = client ? await getToken(client) : undefined;
-
-  //     const response = await fetch(`/api/history/${id}/`, {
-  //       method: "GET",
-  //       headers: {
-  //         Authorization: `Bearer ${dbToken}`,
-  //         'Content-Type': 'application/json',
-  //       },
-  //     });
-
-  //     const data = await response.json();
-
-  //     if (!response.ok) throw new Error("Failed to fetch chat detail");
-
-  //     setSelectedChatDetail(data);  // ← 取得データを保存
-
-  //   } catch (e) {
-  //     console.error(e);
-  //     setSelectedChatDetail(null);  // ← エラー時はnull
-  //   } finally {
-  //     setIsChatLoading(false);
-  //   }
-  // };
-
-
   // --- メニューUI ---
   return (
     <>
