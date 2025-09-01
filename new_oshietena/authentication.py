@@ -34,7 +34,7 @@ class AzureADJWTAuthentication(BaseAuthentication):
             )
 
             # トークンからユーザー情報を取得
-            username = payload.get('preferred_username') or payload.get('upn')
+            username = payload.get('preferred_username') or payload.get('upn') or payload.get("email")
             if not username:
                 raise AuthenticationFailed('Token does not contain a username.')
             
