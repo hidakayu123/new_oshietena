@@ -41,7 +41,13 @@ const Layout = () => {
                     <Link to="/" className={styles.headerTitleContainer}>
                         <h3 className={styles.headerTitle}>{t("headerTitle")}</h3>
                     </Link>
-                    <div>{t("chat")}</div>
+                    <nav>
+                        <ul className={`${styles.headerNavList} ${menuOpen ? styles.show : ""}`}>
+                            <li>
+                                <div>{t("chat")}</div>
+                            </li>
+                        </ul>
+                    </nav>
                     <div className={styles.loginMenuContainer}>
                         {useLogin && <LoginButton />}
                         <IconButton
