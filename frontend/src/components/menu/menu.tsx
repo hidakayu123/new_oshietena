@@ -11,7 +11,7 @@ type Props = {
 type UsageResponse = { count?: number | null; limit: number };
 type ChatHistoryItem = { id: string; title: string; historyBoxId: string;};
 
-export const Sidebarmenu = ({ onNewChat }: Props) => {
+export const SidebarMenu = ({ onNewChat }: Props) => {
   const navigate = useNavigate();
   const onSelectChat = (id: string) => {
       // 1. クリックされたIDを元に、history配列から該当するアイテムを探します

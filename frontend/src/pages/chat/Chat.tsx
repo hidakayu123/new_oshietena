@@ -131,7 +131,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         // 画面のローディング状態などをリセット
         error && setError(undefined);
         setIsLoading(true);
-        setActiveCitation(undefined);
+        // setActiveCitation(undefined);
         // setActiveAnalysisPanelTab(undefined);
 
         // 最初にユーザーの質問と、空の回答欄をUIに追加する
@@ -339,7 +339,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const clearChat = () => {
         lastQuestionRef.current = "";
         error && setError(undefined);
-        setActiveCitation(undefined);
+        // setActiveCitation(undefined);
         // setActiveAnalysisPanelTab(undefined);
         setAnswers([]);
         setSpeechUrls([]);
