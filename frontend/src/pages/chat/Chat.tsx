@@ -346,6 +346,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         // setStreamedAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
+        setLocalHistoryBoxId(uuidv4()); 
         navigate("/");
     };
 
