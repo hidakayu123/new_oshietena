@@ -24,13 +24,14 @@ function getCookie(name: string): string | null {
     return cookieValue;
 }
 
-export async function chatApi(request: ChatAppRequest, token: string | null): Promise<Response> {
+export async function chatApi(request: ChatAppRequest, token: string | null, user_startday: string): Promise<Response> {
 
     const csrfToken = getCookie('csrftoken');
     const headers = {
         'Content-Type': 'application/json',
         'X-CSRFToken': csrfToken || '' ,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'X-Usage-StartDate': user_startday,
     };
 
     return await fetch('/api/chat/', {
