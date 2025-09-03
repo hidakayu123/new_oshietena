@@ -1,3 +1,4 @@
+import React from 'react';
 import { DefaultButton } from "@fluentui/react";
 import { useMsal } from "@azure/msal-react";
 import { useTranslation } from "react-i18next";

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Label } from "@fluentui/react";
 import { useMsal } from "@azure/msal-react";
 import {
