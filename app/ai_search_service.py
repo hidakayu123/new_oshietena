@@ -28,15 +28,9 @@ TARGET_INDEX_COMPANYB = os.environ.get("TARGET_INDEX_COMPANYB")
 # ===============================
 # クエリ構成設定
 # ===============================
-GET_COMPANYA = {
+GET_COMPANY = {
     "vector_fields": "content_vector",
     "select_fields": ["content"],
-}
-
-GET_COMPANYB = {
-    "index_name": TARGET_INDEX_COMPANYB,
-    "vector_fields": "content_vector",
-    "select_fields": ["title", "content"],
 }
 
 # ===============================
@@ -96,7 +90,7 @@ def process_vector_search(query, target_index, vector_fields, select_fields):
 # 特定のターゲットインデックスでベクトル検索を実行
 # ===============================
 def process_target_index(messages, target_index):
-    return process_vector_search(messages, target_index, **GET_COMPANYA)
+    return process_vector_search(messages, target_index, **GET_COMPANY)
 
 # ===============================
 # ベクトル検索結果を整形

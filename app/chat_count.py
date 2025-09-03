@@ -24,75 +24,76 @@ except Exception as e:
 
 
 class ChatCountView(APIView):
-    authentication_classes = [AzureADJWTAuthentication]  # Azure AD JWT認証を使用
+    authentication_classes = [AzureADJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         if not client:
-            # Cosmos DBクライアントの初期化に失敗している場合
             return JsonResponse({"error": "Database connection failed"}, status=500)
 
-        # ユーザーID
         user_id = request.user.username
-        print("ユーザーです", user_id)
+        url_name = request.resolver_match.url_name
 
         try:
-            # --- Cosmos DBへのパラメータ化クエリ作成 ---
-            # ユーザの利用期間取得
+            # --- 1. まず共通の利用期間を一度だけ取得する ---
             query_term = (
                 "SELECT c.AvailableTerm FROM c "
                 "WHERE c.AvailableuserId = @userId"
             )
-
             parameters = [{"name": "@userId", "value": user_id}]
 
             items = list(container.query_items(
                 query=query_term,
                 parameters=parameters,
-                partition_key=user_id  
+                partition_key=user_id
             ))
-            print(items)
 
-            if items:
-                term = items[0]['AvailableTerm']
-                start_of_month_utc = term['start']
-                end_of_period_utc = term['end']
-            else:
+            if not items:
                 raise ValueError(f"AvailableTerm not found for user_id={user_id}")
-            
-            # 利用期間内のチャット回数取得
-            query_count = (
-                "SELECT VALUE COUNT(1) FROM c "
-                "WHERE c.userId = @userId "
-                "AND c.createdAt >= @start_date "
-                "AND c.createdAt <= @end_date"
-            )
 
-            parameters = [
-                {"name": "@userId", "value": user_id},
-                {"name": "@start_date", "value": start_of_month_utc},
-                {"name": "@end_date", "value": end_of_period_utc},
-            ]
+            term = items[0]['AvailableTerm']
+            start_iso_string = term['start'] # "2025-08-22T00:00:00Z"
+            end_iso_string = term['end']
 
-            count_items = list(container.query_items(
-                query=query_count,
-                parameters=parameters,
-                partition_key=user_id  
-            ))
+            # --- 2. URLのnameに応じて処理を分岐 ---
+            if url_name == 'get_startday':
+                # 'Z'を削除してPythonのdatetimeオブジェクトに変換
+                start_datetime_obj = datetime.datetime.fromisoformat(start_iso_string.replace('Z', '+00:00'))
+                
+                # "yyyy-MM-dd" 形式の文字列にフォーマット
+                start_day_formatted = start_datetime_obj.strftime('%Y-%m-%d')
+                
+                response_data = {"start_day": start_day_formatted}
+                return JsonResponse(response_data)
 
-            count = count_items[0] if count_items else 0
+            elif url_name == 'checkcount':
+                # 利用期間内のチャット回数を取得
+                query_count = (
+                    "SELECT VALUE COUNT(1) FROM c "
+                    "WHERE c.userId = @userId "
+                    "AND c.createdAt >= @start_date "
+                    "AND c.createdAt <= @end_date"
+                )
+                parameters_count = [
+                    {"name": "@userId", "value": user_id},
+                    {"name": "@start_date", "value": start_iso_string},
+                    {"name": "@end_date", "value": end_iso_string},
+                ]
 
-            # --- 使用上限の取得とレスポンス作成 ---
-            limit_str = os.environ.get("CHAT_USAGE_LIMIT") 
-            limit = int(limit_str)
+                count_items = list(container.query_items(
+                    query=query_count,
+                    parameters=parameters_count,
+                    partition_key=user_id
+                ))
+                count = count_items[0] if count_items else 0
+                
+                limit = int(os.environ.get("CHAT_USAGE_LIMIT", 0))
 
-            response_data = {
-                "count": count,
-                "limit": limit,
-            }
-
-            print(response_data)
-            return JsonResponse(response_data)
+                response_data = {
+                    "count": count,
+                    "limit": limit,
+                }
+                return JsonResponse(response_data)
 
         except exceptions.CosmosHttpResponseError as e:
             # Cosmos DB からのエラー応答

@@ -27,14 +27,14 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = 'django-insecure-&h--6d#b@l^4w9)*!q=jsdq12s$k00_70#mwnt+b!&^afsl2m_'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # ALLOWED_HOSTS = ['oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net','localhost', '127.0.0.1']
 ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173', # localhostの別名も念のため追加
+    # 'http://localhost:5173',
+    # 'http://127.0.0.1:5173', # localhostの別名も念のため追加
     'https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net',
 ]
 
@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -68,7 +69,7 @@ ROOT_URLCONF = 'new_oshietena.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'new_oshietena' / 'templates'],
+        'DIRS': [BASE_DIR / 'new_oshietena/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -129,10 +130,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = 'build/'
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR / 'frontend/build',
 ]
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -141,8 +144,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 特定のオリジンのみを許可
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Viteのローカル開発サーバー
-    "http://127.0.0.1:5173",
+    # "http://localhost:5173",  # Viteのローカル開発サーバー
+    # "http://127.0.0.1:5173",
     # "https://your-production-frontend.com", # 将来の本番ドメイン
     "https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net",
 ]

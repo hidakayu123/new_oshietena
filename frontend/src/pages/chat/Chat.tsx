@@ -1,11 +1,7 @@
 import React from 'react';
-//import { useAppAuth } from '../../AuthHandler'; 
 import { useRef, useState, useEffect, useContext, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
-import { Panel, DefaultButton } from "@fluentui/react";
-import readNDJSONStream from "ndjson-readablestream";
-
 import appLogo from "../../assets/applogo.svg";
 import styles from "./Chat.module.css";
 import { saveConversationToDb } from "../../api";
@@ -15,32 +11,19 @@ import {
     // configApi,
     RetrievalMode,
     ChatAppResponse,
-    ChatAppResponseOrError,
     ChatAppRequest,
-    ResponseMessage,
     VectorFields,
     GPT4VInput,
     SpeechConfig
 } from "../../api";
 import { Answer, AnswerError, AnswerLoading } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
-import { ExampleList } from "../../components/Example";
 import { UserChatMessage } from "../../components/UserChatMessage";
-import { AnalysisPanel, AnalysisPanelTabs } from "../../components/AnalysisPanel";
-import { HistoryPanel } from "../../components/HistoryPanel";
-import { HistoryProviderOptions, useHistoryManager } from "../../components/HistoryProviders";
-import { HistoryButton } from "../../components/HistoryButton";
-import { SettingsButton } from "../../components/SettingsButton";
 import { ClearChatButton } from "../../components/ClearChatButton";
-import { UploadFile } from "../../components/UploadFile";
 import { useLogin, getToken, requireAccessControl } from "../../authConfig";
 import { useMsal } from "@azure/msal-react";
-import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { LoginContext } from "../../loginContext";
-import { LanguagePicker } from "../../i18n/LanguagePicker";
-import { Settings } from "../../components/Settings/Settings";
-import Sidebarmenu from '../../../../static/menu.js';
-import { msalInstance  } from '../../authConfig'; // 以前デバッグしたトークン取得関数   
+import Sidebarmenu from '../../components/menu/menu';  
 import { useAuthToken } from "../../AuthContext";
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from "react-router-dom";
@@ -89,7 +72,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         console.info(answers)
     
     const [scrollToId, setScrollToId] = useState<string | null>(null);
-    const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
     const [promptTemplate, setPromptTemplate] = useState<string>("");
     const [temperature, setTemperature] = useState<number>(0.3);
@@ -103,7 +85,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
     const [useQueryRewriting, setUseQueryRewriting] = useState<boolean>(false);
     const [reasoningEffort, setReasoningEffort] = useState<string>("");
-    const [streamingEnabled, setStreamingEnabled] = useState<boolean>(true);
     const [shouldStream, setShouldStream] = useState<boolean>(true);
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
     const [includeCategory, setIncludeCategory] = useState<string>("");
@@ -118,23 +99,8 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
     const [error, setError] = useState<unknown>();
-    const [activeCitation, setActiveCitation] = useState<string>();
-    const [activeAnalysisPanelTab, setActiveAnalysisPanelTab] = useState<AnalysisPanelTabs | undefined>(undefined);
-    const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
     const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
-    const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
-    const [showSemanticRankerOption, setShowSemanticRankerOption] = useState<boolean>(false);
-    const [showQueryRewritingOption, setShowQueryRewritingOption] = useState<boolean>(false);
-    const [showReasoningEffortOption, setShowReasoningEffortOption] = useState<boolean>(false);
-    const [showVectorOption, setShowVectorOption] = useState<boolean>(false);
-    const [showUserUpload, setShowUserUpload] = useState<boolean>(false);
-    const [showLanguagePicker, setshowLanguagePicker] = useState<boolean>(false);
     const [showSpeechInput, setShowSpeechInput] = useState<boolean>(false);
-    const [showSpeechOutputBrowser, setShowSpeechOutputBrowser] = useState<boolean>(false);
-    const [showSpeechOutputAzure, setShowSpeechOutputAzure] = useState<boolean>(false);
-    const [showChatHistoryBrowser, setShowChatHistoryBrowser] = useState<boolean>(false);
-    const [showChatHistoryCosmos, setShowChatHistoryCosmos] = useState<boolean>(false);
-    const [showAgenticRetrievalOption, setShowAgenticRetrievalOption] = useState<boolean>(false);
     const [useAgenticRetrieval, setUseAgenticRetrieval] = useState<boolean>(false);
     const navigate = useNavigate();
     const audio = useRef(new Audio()).current;
@@ -155,12 +121,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     };
     const client = useLogin ? useMsal().instance : undefined;
     const { loggedIn } = useContext(LoginContext);
-    const historyProvider: HistoryProviderOptions = (() => {
-        if (useLogin && showChatHistoryCosmos) return HistoryProviderOptions.CosmosDB;
-        if (showChatHistoryBrowser) return HistoryProviderOptions.IndexedDB;
-        return HistoryProviderOptions.None;
-    })();
-    const historyManager = useHistoryManager(historyProvider);
+
     const { token } = useAuthToken();
     
     const makeApiRequest = async (question: string) => {
@@ -170,8 +131,8 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         // 画面のローディング状態などをリセット
         error && setError(undefined);
         setIsLoading(true);
-        setActiveCitation(undefined);
-        setActiveAnalysisPanelTab(undefined);
+        // setActiveCitation(undefined);
+        // setActiveAnalysisPanelTab(undefined);
 
         // 最初にユーザーの質問と、空の回答欄をUIに追加する
         // これにより、ユーザーは即座にフィードバックを得られる
@@ -254,8 +215,8 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                         conversationId: conversationId,
                         question: question,
                         answer: answer,
-                        historyBoxId: localHistoryBoxId,
-                    }, dbToken ?? null);
+                        historyBoxId: localHistoryBoxId ?? undefined,
+                    }, dbToken);
 
                     console.log("会話が正常にDBへ保存されました。");
                 } catch (error) {
@@ -263,15 +224,30 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 }
             };
 
-            // 3. API呼び出しとレスポンス処理
-                const response = await chatApi(request, token);
+                    // ユーザの利用開始日取得
+                    const user_startday = await fetch(`/api/startday/`, {
+                        method: "GET",
+                        headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        },
+                    });
+                    const startDayData = await user_startday.json();
+                    const user_startday_string = startDayData.start_day;
+
+
+                    // 3. API呼び出しとレスポンス処理
+                    const response = await chatApi(request, token ?? null, user_startday_string);
 
                 if (!response.ok) {
-                        const errorBody = await response.json();
-                        const error = new Error();
-                        (error as any).code = errorBody.error || "unknown_error";
-                        throw error;
-                    }
+                    const errorBody = await response.json();
+                    const error = new Error();
+                    (error as any).code = errorBody.error || "unknown_error";
+                    throw error;
+                }
+                if (!response.body) {
+                    throw new Error("Response body is null");
+                }
 
             let finalAnswer: ChatAppResponse;
 
@@ -337,7 +313,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                 const token = client ? await getToken(client) : undefined;
                 const historyForManager = answers.map(turn => [turn.question, turn.answer] as [string, ChatAppResponse]);
-                historyManager.addItem(parsedResponse.session_state, [...historyForManager, [question, parsedResponse]], token);
+                // historyManager.addItem(parsedResponse.session_state, [...historyForManager, [question, parsedResponse]], token);
                 };
 // ===============================================================================================
 //  以下ストリーミング回答用
@@ -375,13 +351,14 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const clearChat = () => {
         lastQuestionRef.current = "";
         error && setError(undefined);
-        setActiveCitation(undefined);
-        setActiveAnalysisPanelTab(undefined);
+        // setActiveCitation(undefined);
+        // setActiveAnalysisPanelTab(undefined);
         setAnswers([]);
         setSpeechUrls([]);
         // setStreamedAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
+        setLocalHistoryBoxId(uuidv4()); 
         navigate("/");
     };
 
@@ -411,126 +388,22 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         }
     }, [answers, scrollToId]);
 
-    // const handleSettingsChange = (field: string, value: any) => {
-    //     switch (field) {
-    //         case "promptTemplate":
-    //             setPromptTemplate(value);
-    //             break;
-    //         case "temperature":
-    //             setTemperature(value);
-    //             break;
-    //         case "seed":
-    //             setSeed(value);
-    //             break;
-    //         case "minimumRerankerScore":
-    //             setMinimumRerankerScore(value);
-    //             break;
-    //         case "minimumSearchScore":
-    //             setMinimumSearchScore(value);
-    //             break;
-    //         case "retrieveCount":
-    //             setRetrieveCount(value);
-    //             break;
-    //         case "maxSubqueryCount":
-    //             setMaxSubqueryCount(value);
-    //             break;
-    //         case "resultsMergeStrategy":
-    //             setResultsMergeStrategy(value);
-    //             break;
-    //         case "useSemanticRanker":
-    //             setUseSemanticRanker(value);
-    //             break;
-    //         case "useQueryRewriting":
-    //             setUseQueryRewriting(value);
-    //             break;
-    //         case "reasoningEffort":
-    //             setReasoningEffort(value);
-    //             break;
-    //         case "useSemanticCaptions":
-    //             setUseSemanticCaptions(value);
-    //             break;
-    //         case "excludeCategory":
-    //             setExcludeCategory(value);
-    //             break;
-    //         case "includeCategory":
-    //             setIncludeCategory(value);
-    //             break;
-    //         case "useOidSecurityFilter":
-    //             setUseOidSecurityFilter(value);
-    //             break;
-    //         case "useGroupsSecurityFilter":
-    //             setUseGroupsSecurityFilter(value);
-    //             break;
-    //         case "shouldStream":
-    //             setShouldStream(value);
-    //             break;
-    //         case "useSuggestFollowupQuestions":
-    //             setUseSuggestFollowupQuestions(value);
-    //             break;
-    //         case "useGPT4V":
-    //             setUseGPT4V(value);
-    //             break;
-    //         case "gpt4vInput":
-    //             setGPT4VInput(value);
-    //             break;
-    //         case "vectorFields":
-    //             setVectorFields(value);
-    //             break;
-    //         case "retrievalMode":
-    //             setRetrievalMode(value);
-    //             break;
-    //         case "useAgenticRetrieval":
-    //             setUseAgenticRetrieval(value);
-    //     }
-    // };
-
-    // const onExampleClicked = (example: string) => {
-    //     makeApiRequest(example);
-    // };
-    const onShowCitation = (citation: string, index: number) => {
-        if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
-            setActiveAnalysisPanelTab(undefined);
-        } else {
-            setActiveCitation(citation);
-            setActiveAnalysisPanelTab(AnalysisPanelTabs.CitationTab);
-        }
-
-        setSelectedAnswer(index);
-    };
-    const onToggleTab = (tab: AnalysisPanelTabs, index: number) => {
-        if (activeAnalysisPanelTab === tab && selectedAnswer === index) {
-            setActiveAnalysisPanelTab(undefined);
-        } else {
-            setActiveAnalysisPanelTab(tab);
-        }
-
-        setSelectedAnswer(index);
-    };
     const { t, i18n } = useTranslation();
 
-    // useEffect(() => {
-    //     chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" });
-    // }, [answers]); 
 
     return (
         <div className={styles.container}>
-            {/* Setting the page title using react-helmet-async */}
             <Helmet>
                 <title>{t("pageTitle")}</title>
             </Helmet>
             <div className={styles.commandsSplitContainer}>
                 <div className={styles.commandsContainer}>
-                    {/* {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
-                        <HistoryButton className={styles.commandButton} onClick={() => setIsHistoryPanelOpen(!isHistoryPanelOpen)} />
-                    )} */}
                 </div>
                 <div className={styles.commandsContainer}>
                     <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
-                    {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
-                    {/* <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} /> */}
                 </div>
             </div>
-            <Sidebarmenu/>
+            <Sidebarmenu onNewChat={clearChat} /> 
             <div className={styles.chatRoot} style={{ marginLeft: isHistoryPanelOpen ? "300px" : "0" }}>
                 <div className={styles.chatContainer}>
                     {!lastQuestionRef.current ? (
@@ -538,10 +411,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                             <img src={appLogo} alt="App logo" width="120" height="120" />
 
                             <h1 className={styles.chatEmptyStateTitle}>{t("chatEmptyStateTitle")}</h1>
-                            {/* <h2 className={styles.chatEmptyStateSubtitle}>{t("chatEmptyStateSubtitle")}</h2> */}
-                            {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
-
-                            {/* <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} /> */}
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
@@ -568,14 +437,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                                                     answer={turn.answer}
                                                     index={index}
                                                     speechConfig={speechConfig}
-                                                    isSelected={selectedAnswer === index && activeAnalysisPanelTab !== undefined}
-                                                    onCitationClicked={c => onShowCitation(c, index)}
-                                                    onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab, index)}
-                                                    onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab, index)}
-                                                    onFollowupQuestionClicked={q => makeApiRequest(q)}
-                                                    showFollowupQuestions={useSuggestFollowupQuestions && answers.length - 1 === index}
-                                                    showSpeechOutputAzure={showSpeechOutputAzure}
-                                                    showSpeechOutputBrowser={showSpeechOutputBrowser}
                                                 />
                                             )}
                                         </div>
@@ -596,96 +457,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                         />
                     </div>
                 </div>
-                {/* {answers.length > 0 && activeAnalysisPanelTab && (
-                    <AnalysisPanel
-                        className={styles.chatAnalysisPanel}
-                        activeCitation={activeCitation}
-                        onActiveTabChanged={x => onToggleTab(x, selectedAnswer)}
-                        citationHeight="810px"
-                        answer={answers[selectedAnswer].answer}
-                        activeTab={activeAnalysisPanelTab}
-                    />
-                )}
-                {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
-                    <HistoryPanel
-                        provider={historyProvider}
-                        isOpen={isHistoryPanelOpen}
-                        notify={!isStreaming && !isLoading}
-                        onClose={() => setIsHistoryPanelOpen(false)}
-                        onChatSelected={data => { // "data" を受け取る
-
-                            // ★★★★★★★★★★★★★★★★★★★★★★★★★
-                            // ★ data.conversation に対して .map を使います ★
-                            // ★★★★★★★★★★★★★★★★★★★★★★★★★
-                            const transformedHistory = data.conversation.map(turn => {
-                                // ★ このカッコの中で "turn" が使えます ★
-                                // turn は [質問文字列, 回答オブジェクト] という配列です
-                                const question = turn[0];
-                                const answer = turn[1];
-                                return {
-                                    id: uuidv4(), // 古いデータにはIDがないため、ここで新しいIDを生成
-                                    question: question,
-                                    answer: answer
-                                };
-                            }); // ★ ここで .map の処理は終わりです ★
-
-                            const firstMessageId = transformedHistory.length > 0 ? transformedHistory[0].id : null;
-
-                            // ★ .map が終わった後で、stateを更新します ★
-                            setAnswers(transformedHistory);
-                            setScrollToId(data.targetId);
-                            lastQuestionRef.current = transformedHistory.length > 0 ? transformedHistory[transformedHistory.length - 1].question : "";
-                        }}
-                    />
-                )}
-                <Panel
-                    headerText={t("labels.headerText")}
-                    isOpen={isConfigPanelOpen}
-                    isBlocking={false}
-                    onDismiss={() => setIsConfigPanelOpen(false)}
-                    closeButtonAriaLabel={t("labels.closeButton")}
-                    onRenderFooterContent={() => <DefaultButton onClick={() => setIsConfigPanelOpen(false)}>{t("labels.closeButton")}</DefaultButton>}
-                    isFooterAtBottom={true}
-                >
-                    <Settings
-                        promptTemplate={promptTemplate}
-                        temperature={temperature}
-                        retrieveCount={retrieveCount}
-                        maxSubqueryCount={maxSubqueryCount}
-                        resultsMergeStrategy={resultsMergeStrategy}
-                        seed={seed}
-                        minimumSearchScore={minimumSearchScore}
-                        minimumRerankerScore={minimumRerankerScore}
-                        useSemanticRanker={useSemanticRanker}
-                        useSemanticCaptions={useSemanticCaptions}
-                        useQueryRewriting={useQueryRewriting}
-                        reasoningEffort={reasoningEffort}
-                        excludeCategory={excludeCategory}
-                        includeCategory={includeCategory}
-                        retrievalMode={retrievalMode}
-                        useGPT4V={useGPT4V}
-                        gpt4vInput={gpt4vInput}
-                        vectorFields={vectorFields}
-                        showSemanticRankerOption={showSemanticRankerOption}
-                        showQueryRewritingOption={showQueryRewritingOption}
-                        showReasoningEffortOption={showReasoningEffortOption}
-                        showGPT4VOptions={showGPT4VOptions}
-                        showVectorOption={showVectorOption}
-                        useOidSecurityFilter={useOidSecurityFilter}
-                        useGroupsSecurityFilter={useGroupsSecurityFilter}
-                        useLogin={!!useLogin}
-                        loggedIn={loggedIn}
-                        requireAccessControl={requireAccessControl}
-                        shouldStream={shouldStream}
-                        streamingEnabled={streamingEnabled}
-                        useSuggestFollowupQuestions={useSuggestFollowupQuestions}
-                        showSuggestFollowupQuestions={true}
-                        showAgenticRetrievalOption={showAgenticRetrievalOption}
-                        useAgenticRetrieval={useAgenticRetrieval}
-                        onChange={handleSettingsChange}
-                    />
-                    {useLogin && <TokenClaimsDisplay />}
-                </Panel> */}
             </div>
             {/* モーダル */}
             {modalVisible && (
