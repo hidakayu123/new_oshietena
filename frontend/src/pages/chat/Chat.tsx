@@ -224,8 +224,20 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 }
             };
 
-            // 3. API呼び出しとレスポンス処理
-                const response = await chatApi(request, token ?? null);
+                    // ユーザの利用開始日取得
+                    const user_startday = await fetch(`/api/startday/`, {
+                        method: "GET",
+                        headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        },
+                    });
+                    const startDayData = await user_startday.json();
+                    const user_startday_string = startDayData.start_day;
+
+
+                    // 3. API呼び出しとレスポンス処理
+                    const response = await chatApi(request, token, user_startday_string);
 
                 if (!response.ok) {
                     const errorBody = await response.json();
