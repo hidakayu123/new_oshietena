@@ -237,7 +237,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
 
 
                     // 3. API呼び出しとレスポンス処理
-                    const response = await chatApi(request, token, user_startday_string);
+                    const response = await chatApi(request, token ?? null, user_startday_string);
 
                 if (!response.ok) {
                     const errorBody = await response.json();
