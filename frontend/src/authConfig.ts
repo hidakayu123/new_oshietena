@@ -42,7 +42,7 @@ interface AuthSetup {
 }
 
 async function fetchAuthSetup(): Promise<AuthSetup> {
-    const response = await fetch(`/api/auth_setup`);
+    const response = await fetch(`/api/auth_setup/`);
     if (!response.ok) {
         throw new Error(`auth setup response was not ok: ${response.status}`);
     }
