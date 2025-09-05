@@ -24,7 +24,9 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&h--6d#b@l^4w9)*!q=jsdq12s$k00_70#mwnt+b!&^afsl2m_'
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("No SECRET_KEY set for the project. Set it in your .env file.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -33,9 +35,9 @@ DEBUG = False
 ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
-    # 'http://localhost:5173',
-    # 'http://127.0.0.1:5173', # localhostの別名も念のため追加
+    'http://localhost:5173',
     'https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net',
+    "http://localhost:8000",
 ]
 
 # Application definition
@@ -134,7 +136,6 @@ STATIC_URL = 'build/'
 STATICFILES_DIRS = [
     BASE_DIR / 'frontend/build',
 ]
-
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
@@ -144,10 +145,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 特定のオリジンのみを許可
 CORS_ALLOWED_ORIGINS = [
-    # "http://localhost:5173",  # Viteのローカル開発サーバー
-    # "http://127.0.0.1:5173",
-    # "https://your-production-frontend.com", # 将来の本番ドメイン
+    "http://localhost:5173",  # Viteのローカル開発サーバー
     "https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net",
+    "http://localhost:8000",
 ]
 
 LOGGING = {

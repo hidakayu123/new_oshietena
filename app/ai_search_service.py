@@ -20,12 +20,6 @@ SEARCH_CLIENT_ENDPOINT = os.environ.get("SEARCH_CLIENT_ENDPOINT")
 AZURE_KEY_CREDENTIAL = os.environ.get("AZURE_KEY_CREDENTIAL")
 
 # ===============================
-# AI Search のインデックス名
-# ===============================
-TARGET_INDEX_COMPANYA = os.environ.get("TARGET_INDEX_COMPANYA")
-TARGET_INDEX_COMPANYB = os.environ.get("TARGET_INDEX_COMPANYB")
-
-# ===============================
 # クエリ構成設定
 # ===============================
 GET_COMPANY = {
