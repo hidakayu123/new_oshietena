@@ -1,7 +1,5 @@
 const BACKEND_URI = import.meta.env.VITE_BACKEND_URI || "";
-import { getToken } from '../authConfig'; 
-import { msalInstance } from '../authConfig';
-import { ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, Config, SimpleAPIResponse, HistoryListApiResponse, HistoryApiResponse } from "./models";
+import { ChatAppResponse, ChatAppRequest } from "./models";
 
 /**
  * DjangoのCSRFトークンをクッキーから取得するためのヘルパー関数

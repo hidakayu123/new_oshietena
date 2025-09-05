@@ -1,23 +1,28 @@
-// index.tsx または main.tsx
-
+// React and related libraries
 import React from 'react';
 import ReactDOM from "react-dom/client";
 import { createHashRouter, RouterProvider } from "react-router-dom";
-import { I18nextProvider } from "react-i18next";
 import { HelmetProvider } from "react-helmet-async";
-import { initializeIcons } from "@fluentui/react";
-import { EventType, InteractionType, EventMessage, AuthenticationResult } from "@azure/msal-browser";
-import { MsalProvider, MsalAuthenticationTemplate } from "@azure/msal-react";
+import { I18nextProvider } from "react-i18next";
 
-import "./index.css";
-import Chat from "./pages/chat/Chat";
+// Third-party libraries (MSAL, Fluent UI)
+import { MsalProvider, MsalAuthenticationTemplate } from "@azure/msal-react";
+import { EventType, InteractionType, EventMessage, AuthenticationResult } from "@azure/msal-browser";
+import { initializeIcons } from "@fluentui/react";
+
+// Local application components and pages
 import LayoutWrapper from "./layoutWrapper";
-import i18next from "./i18n/config";
-import { AuthHandler } from "./AuthHandler";
-import { msalInstance, loginRequest } from './authConfig';
-import { AuthProvider } from './AuthContext';
+import Chat from "./pages/chat/Chat";
 import ChatWrapper from "./ChatWrapper";
 
+// Local application configuration and providers
+import { AuthProvider } from './AuthContext';
+import { AuthHandler } from "./AuthHandler";
+import { msalInstance, loginRequest } from './authConfig';
+import i18next from "./i18n/config";
+
+// Styles
+import "./index.css";
 // ルーターの定義
 const router = createHashRouter([
   {
@@ -49,19 +54,8 @@ const router = createHashRouter([
       },
     ],
   },
-
-  // ✅ ChatWrapper を個別のルートで追加
-//   {
-//     path: "chat/:id",
-//     element: (
-//       <AuthHandler>
-//         <ChatWrapper />
-//       </AuthHandler>
-//     ),
-//   },
 ]);
 
-// ★★★ 修正点 ★★★
 // アプリケーションを起動するための非同期関数を定義します
 async function main() {
     // 1. MSALインスタンスの初期化を待ちます (これが抜けていました)

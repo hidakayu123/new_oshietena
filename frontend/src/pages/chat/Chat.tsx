@@ -1,40 +1,45 @@
-import React from 'react';
-import { useRef, useState, useEffect, useContext, useLayoutEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { Helmet } from "react-helmet-async";
-import appLogo from "../../assets/applogo.svg";
-import styles from "./Chat.module.css";
-import { saveConversationToDb } from "../../api";
+// React core imports
+import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 
+// Third-party library imports
+import { useMsal } from "@azure/msal-react";
+import { Helmet } from "react-helmet-async";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from 'uuid';
+
+// Application API & Authentication
 import {
     chatApi,
-    // configApi,
+    saveConversationToDb,
     RetrievalMode,
     ChatAppResponse,
     ChatAppRequest,
     VectorFields,
     GPT4VInput,
-    SpeechConfig
+    ConversationTurn,
+    InitialAnswerRaw
 } from "../../api";
+import { useLogin, getToken } from "../../authConfig";
+
+// Local UI components
 import { Answer, AnswerError, AnswerLoading } from "../../components/Answer";
+import { ClearChatButton } from "../../components/ClearChatButton";
 import { QuestionInput } from "../../components/QuestionInput";
 import { UserChatMessage } from "../../components/UserChatMessage";
-import { ClearChatButton } from "../../components/ClearChatButton";
-import { useLogin, getToken, requireAccessControl } from "../../authConfig";
-import { useMsal } from "@azure/msal-react";
-import { LoginContext } from "../../loginContext";
-import Sidebarmenu from '../../components/menu/menu';  
-import { useAuthToken } from "../../AuthContext";
-import { v4 as uuidv4 } from 'uuid';
-import { useNavigate } from "react-router-dom";
-import { ConversationTurn, InitialAnswerRaw } from "../../api";
-import  SimpleModal   from "./SimpleModal";
+import Sidebarmenu from '../../components/menu/menu';
+import SimpleModal from "./SimpleModal";
+
+// Assets & Styles
+import appLogo from "../../assets/applogo.svg";
+import styles from "./Chat.module.css";
 
 interface ChatProps {
   initialAnswers?: InitialAnswerRaw[];
   targetId?: string | null;
   historyBoxId?: string | null;
 }
+
 const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const [localHistoryBoxId, setLocalHistoryBoxId] = useState<string | null>(historyBoxId || null);
     useEffect(() => {
@@ -70,69 +75,50 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
             return [];
         });
         console.info(answers)
-    
+    const isHistoryPanelOpen: boolean = false;
+    const promptTemplate: string = "";
+    const temperature: number = 0.3;
+    const seed: number | null = null;
+    const minimumRerankerScore: number = 0;
+    const minimumSearchScore: number = 0;
+    const retrieveCount: number = 3;
+    const maxSubqueryCount: number = 10;
+    const resultsMergeStrategy: string = "interleaved";
+    const retrievalMode: RetrievalMode = RetrievalMode.Vectors;
+    const useSemanticRanker: boolean = true;
+    const useQueryRewriting: boolean = false;
+    const reasoningEffort: string = "";
+    const shouldStream: boolean = true;
+    const useSemanticCaptions: boolean = false;
+    const includeCategory: string = "";
+    const excludeCategory: string = "";
+    const useSuggestFollowupQuestions: boolean = false;
+    const vectorFields: VectorFields = VectorFields.TextAndImageEmbeddings;
+    const useOidSecurityFilter: boolean = false;
+    const useGroupsSecurityFilter: boolean = false;
+    const gpt4vInput: GPT4VInput = GPT4VInput.TextAndImages;
+    const useGPT4V: boolean = false;
+    const showSpeechInput: boolean = false;
+    const useAgenticRetrieval: boolean = false;
     const [scrollToId, setScrollToId] = useState<string | null>(null);
-    const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
-    const [promptTemplate, setPromptTemplate] = useState<string>("");
-    const [temperature, setTemperature] = useState<number>(0.3);
-    const [seed, setSeed] = useState<number | null>(null);
-    const [minimumRerankerScore, setMinimumRerankerScore] = useState<number>(0);
-    const [minimumSearchScore, setMinimumSearchScore] = useState<number>(0);
-    const [retrieveCount, setRetrieveCount] = useState<number>(3);
-    const [maxSubqueryCount, setMaxSubqueryCount] = useState<number>(10);
-    const [resultsMergeStrategy, setResultsMergeStrategy] = useState<string>("interleaved");
-    const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Vectors);
-    const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
-    const [useQueryRewriting, setUseQueryRewriting] = useState<boolean>(false);
-    const [reasoningEffort, setReasoningEffort] = useState<string>("");
-    const [shouldStream, setShouldStream] = useState<boolean>(true);
-    const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
-    const [includeCategory, setIncludeCategory] = useState<string>("");
-    const [excludeCategory, setExcludeCategory] = useState<string>("");
-    const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(false);
-    const [vectorFields, setVectorFields] = useState<VectorFields>(VectorFields.TextAndImageEmbeddings);
-    const [useOidSecurityFilter, setUseOidSecurityFilter] = useState<boolean>(false);
-    const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
-    const [gpt4vInput, setGPT4VInput] = useState<GPT4VInput>(GPT4VInput.TextAndImages);
-    const [useGPT4V, setUseGPT4V] = useState<boolean>(false);
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
     const [error, setError] = useState<unknown>();
-    const [speechUrls, setSpeechUrls] = useState<(string | null)[]>([]);
-    const [showSpeechInput, setShowSpeechInput] = useState<boolean>(false);
-    const [useAgenticRetrieval, setUseAgenticRetrieval] = useState<boolean>(false);
-    const navigate = useNavigate();
-    const audio = useRef(new Audio()).current;
-    const [isPlaying, setIsPlaying] = useState(false);
-    const { instance } = useMsal();
-    // state定義（親コンポーネント内）
     const [modalVisible, setModalVisible] = useState(false);
     const [modalContent, setModalContent] = useState({ title: ""});
-
-    // モーダルを閉じる関数
     const hideModal = () => setModalVisible(false);
-    const speechConfig: SpeechConfig = {
-        speechUrls,
-        setSpeechUrls,
-        audio,
-        isPlaying,
-        setIsPlaying
-    };
+    const navigate = useNavigate();
+    const { instance } = useMsal();
     const client = useLogin ? useMsal().instance : undefined;
-    const { loggedIn } = useContext(LoginContext);
-
-    const { token } = useAuthToken();
     
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
-        // 1. UI Stateの準備
+        // UI Stateの準備
         // 画面のローディング状態などをリセット
         error && setError(undefined);
         setIsLoading(true);
-        // setActiveCitation(undefined);
-        // setActiveAnalysisPanelTab(undefined);
 
         // 最初にユーザーの質問と、空の回答欄をUIに追加する
         // これにより、ユーザーは即座にフィードバックを得られる
@@ -143,7 +129,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
             session_state: {}
         };
         // ★Stateを更新する際は、必ず更新用の関数 (setAnswers) を使う
-        //setAnswers(prevAnswers => [...prevAnswers, [question, initialResponse]]);
         const newTurn: ConversationTurn = {
             id: uuidv4(), // 新しいIDを生成
             question: question,
@@ -152,7 +137,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
         setAnswers(prevAnswers => [...prevAnswers, newTurn]);
 
         try {
-            // 2. APIリクエストの構築
+            // APIリクエストの構築
             // 認証トークンの取得
             const token = client ? await getToken(client) : undefined;
             const account = instance.getActiveAccount();
@@ -198,9 +183,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
 
             // --- DB保存用の共通関数を定義 ---
             const saveConversation = async (question: string, answer: ChatAppResponse) => {
-                // session_state がなければ保存しない
-                // if (!answer.session_state) return;
-
                 try {
                     console.log("DBへの会話保存処理を開始します...");
                     const dbToken = client ? await getToken(client) : undefined;
@@ -224,35 +206,33 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 }
             };
 
-                    // ユーザの利用開始日取得
-                    const user_startday = await fetch(`/api/startday/`, {
-                        method: "GET",
-                        headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        },
-                    });
-                    const startDayData = await user_startday.json();
-                    const user_startday_string = startDayData.start_day;
+            // ユーザの利用開始日取得
+            const user_startday = await fetch(`/api/startday/`, {
+                method: "GET",
+                headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                },
+            });
+            const startDayData = await user_startday.json();
+            const user_startday_string = startDayData.start_day;
 
 
-                    // 3. API呼び出しとレスポンス処理
-                    const response = await chatApi(request, token ?? null, user_startday_string);
+            // 3. API呼び出しとレスポンス処理
+            const response = await chatApi(request, token ?? null, user_startday_string);
 
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    const error = new Error();
-                    (error as any).code = errorBody.error || "unknown_error";
-                    throw error;
-                }
-                if (!response.body) {
-                    throw new Error("Response body is null");
-                }
+            if (!response.ok) {
+                const errorBody = await response.json();
+                const error = new Error();
+                (error as any).code = errorBody.error || "unknown_error";
+                throw error;
+            }
+            if (!response.body) {
+                throw new Error("Response body is null");
+            }
 
             let finalAnswer: ChatAppResponse;
 
-// ===============================================================================================
-//  以下ストリーミング回答用
             if (shouldStream) {
                 // --- ストリーミング処理 ---
                 setIsStreaming(true);
@@ -296,8 +276,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 }
                 finalAnswer =  { ...initialResponse };
             } else {
-// ===============================================================================================
-
                 // --- 非ストリーミング処理 ---
                 const parsedResponse = await response.json();
                 if (parsedResponse.error) {
@@ -313,12 +291,8 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                 const token = client ? await getToken(client) : undefined;
                 const historyForManager = answers.map(turn => [turn.question, turn.answer] as [string, ChatAppResponse]);
-                // historyManager.addItem(parsedResponse.session_state, [...historyForManager, [question, parsedResponse]], token);
                 };
-// ===============================================================================================
-//  以下ストリーミング回答用
             }
-// ===============================================================================================
 
             await saveConversation(question, finalAnswer);
         } catch (e: any) {
@@ -343,7 +317,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                 });
             }
         } finally {
-            // 5. 最終処理
             setIsLoading(false);
             setIsStreaming(false);
         }
@@ -351,11 +324,7 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     const clearChat = () => {
         lastQuestionRef.current = "";
         error && setError(undefined);
-        // setActiveCitation(undefined);
-        // setActiveAnalysisPanelTab(undefined);
         setAnswers([]);
-        setSpeechUrls([]);
-        // setStreamedAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
         setLocalHistoryBoxId(uuidv4()); 
@@ -363,20 +332,14 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     };
 
     useLayoutEffect(() => {
-        console.log("【3. Chat 検証】スクロールターゲットを探すuseEffectが実行されました。targetId:", targetId);
-
         // targetQuestion があり、answersがセットされた後に実行
         if (targetId && answers.length > 0) {
             const targetTurn = answers.find(turn => turn.id === targetId);
             if (targetTurn) {
-                console.log("【3. Chat 検証】ターゲットが見つかりました！ID:", targetTurn.id);
                 setScrollToId(targetTurn.id);
-            } else {
-                console.log("【3. Chat 検証】ターゲットが見つかりませんでした。");
             }
         }
     }, [targetId]); // answersとtargetQuestionが変わった時に実行
-
 
     useLayoutEffect(() => {
         if (scrollToId) {
@@ -389,7 +352,6 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
     }, [answers, scrollToId]);
 
     const { t, i18n } = useTranslation();
-
 
     return (
         <div className={styles.container}>
@@ -433,10 +395,9 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
                                             ) : (
                                                 <Answer
                                                     isStreaming={isStreaming && isLastAnswer} // ストリーミング中も正しく表示
-                                                    key={index}
+                                                    // key={index}
                                                     answer={turn.answer}
-                                                    index={index}
-                                                    speechConfig={speechConfig}
+                                                    // index={index}
                                                 />
                                             )}
                                         </div>
