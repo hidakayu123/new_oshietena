@@ -1,5 +1,6 @@
 .env
 frontend/.env.local
+frontend/.env.production
 
 **/node_modules/
 

@@ -40,6 +40,8 @@ class ChatView(APIView):
             messages = request.data.get("messages", [])
             target_index = request.auth.get('oid')
             auth_header = request.headers.get('Authorization')
+            csrf_token = request.headers.get('x-csrftoken')
+            usage_start_date = request.headers.get('x-usage-startdate')
             if not messages:
                 return Response({"error": "messages field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -50,6 +52,13 @@ class ChatView(APIView):
                         user_question = message.get("content")
                         break # ユーザーの質問を見つけたらループを抜ける
 
+            headers_for_apim = {
+                'Authorization': auth_header,
+                'Content-Type': 'application/json',
+                'x-usage-startdate': usage_start_date,
+                'x-csrftoken': csrf_token
+            }
+
             if target_index:
                 anser = process_target_index(user_question, target_index)
                 print(anser)
@@ -58,7 +67,7 @@ class ChatView(APIView):
                     "role": "system",
                     "content": f"以下は関連情報です:\n{vector_summary}"
                 })
-                response = handle_chatbot_response(messages, auth_header)
+                response = handle_chatbot_response(messages, headers_for_apim)
                 return StreamingHttpResponse(
                 stream_chatbot_response(messages, response),
                 content_type="text/event-stream",

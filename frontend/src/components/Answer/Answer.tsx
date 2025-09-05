@@ -1,47 +1,31 @@
-import React from 'react';
-import { useMemo, useState } from "react";
-import { Stack, IconButton } from "@fluentui/react";
-import { useTranslation } from "react-i18next";
-import DOMPurify from "dompurify";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
+// React core
+import React, { useMemo, useState } from "react";
 
-import styles from "./Answer.module.css";
-import { ChatAppResponse, SpeechConfig } from "../../api";
-import { parseAnswerToHtml } from "./AnswerParser";
+// Third-party libraries
+import { Stack, IconButton } from "@fluentui/react";
+import DOMPurify from "dompurify";
+import { useTranslation } from "react-i18next";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
+
+// Local application imports
+import { ChatAppResponse } from "../../api";
 import { AnswerIcon } from "./AnswerIcon";
+import { parseAnswerToHtml } from "./AnswerParser";
+
+// Styles
+import styles from "./Answer.module.css";
 
 interface Props {
     answer: ChatAppResponse;
-    index: number;
-    speechConfig: SpeechConfig;
-    isSelected?: boolean;
     isStreaming: boolean;
-    onCitationClicked?: (filePath: string) => void;
-    onThoughtProcessClicked?: () => void;
-    onSupportingContentClicked?: () => void;
-    onFollowupQuestionClicked?: (question: string) => void;
-    showFollowupQuestions?: boolean;
-    showSpeechOutputBrowser?: boolean;
-    showSpeechOutputAzure?: boolean;
 }
 
 export const Answer = ({
     answer,
-    index,
-    speechConfig,
-    isSelected,
     isStreaming,
-    onCitationClicked,
-    onThoughtProcessClicked,
-    onSupportingContentClicked,
-    onFollowupQuestionClicked,
-    showFollowupQuestions,
-    showSpeechOutputAzure,
-    showSpeechOutputBrowser
 }: Props) => {
-    const followupQuestions = answer.context;
     const parsedAnswer = useMemo(() => parseAnswerToHtml(answer, isStreaming), [answer]);
     const { t } = useTranslation();
     const sanitizedAnswerHtml = DOMPurify.sanitize(parsedAnswer.answerHtml);
@@ -61,7 +45,7 @@ export const Answer = ({
     };
 
     return (
-        <Stack className={`${styles.answerContainer} ${isSelected && styles.selected}`} verticalAlign="space-between">
+        <Stack className={`${styles.answerContainer}`} verticalAlign="space-between">
             <Stack.Item>
                 <Stack horizontal horizontalAlign="space-between">
                     <AnswerIcon />
@@ -97,21 +81,6 @@ export const Answer = ({
                     </Stack>
                 </Stack.Item>
             )}
-
-            {/* {!!followupQuestions?.length && showFollowupQuestions && onFollowupQuestionClicked && (
-                <Stack.Item>
-                    <Stack horizontal wrap className={`${!!parsedAnswer.citations.length ? styles.followupQuestionsList : ""}`} tokens={{ childrenGap: 6 }}>
-                        <span className={styles.followupQuestionLearnMore}>{t("followupQuestions")}</span>
-                        {followupQuestions.map((x, i) => {
-                            return (
-                                <a key={i} className={styles.followupQuestion} title={x} onClick={() => onFollowupQuestionClicked(x)}>
-                                    {`${x}`}
-                                </a>
-                            );
-                        })}
-                    </Stack>
-                </Stack.Item>
-            )} */}
         </Stack>
     );
 };

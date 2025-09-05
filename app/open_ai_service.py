@@ -21,7 +21,7 @@ openai_client_config = {
 client = AzureOpenAI(**openai_client_config)
 deployment = DEPLOYMENT
 
-def handle_chatbot_response(messages, auth_header):
+def handle_chatbot_response(messages, headers_for_apim):
     
     kwargs = {
         "messages": messages,
@@ -29,9 +29,7 @@ def handle_chatbot_response(messages, auth_header):
         # "stream": False,
         "stream": True,   
         "temperature": 0,
-        "extra_headers": {
-            "Authorization": auth_header
-        }
+        "extra_headers": headers_for_apim
     }
     response = client.chat.completions.create(**kwargs)
     return response

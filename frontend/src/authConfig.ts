@@ -1,9 +1,10 @@
 // Refactored from https://github.com/Azure-Samples/ms-identity-javascript-react-tutorial/blob/main/1-Authentication/1-sign-in/SPA/src/authConfig.js
 
 import { Configuration, PublicClientApplication, IPublicClientApplication } from "@azure/msal-browser";
-const BACKEND_URI = import.meta.env.VITE_BACKEND_URI || "";
+const BACKEND_URI = import.meta.env.VITE_BACKEND_URI;
 const TENANTID = import.meta.env.VITE_TENANTID;
 const CLIENTID = import.meta.env.VITE_CLIENTID;
+const API_SCOPE_URI = import.meta.env.VITE_API_SCOPE_URI;
 // const appServicesAuthTokenUrl = "/api/.auth/me";
 const appServicesAuthTokenRefreshUrl = ".auth/refresh";
 const appServicesAuthLogoutUrl = ".auth/logout?post_logout_redirect_uri=/";
@@ -41,7 +42,7 @@ interface AuthSetup {
 }
 
 async function fetchAuthSetup(): Promise<AuthSetup> {
-    const response = await fetch(`/api/auth_setup`);
+    const response = await fetch(`/api/auth_setup/`);
     if (!response.ok) {
         throw new Error(`auth setup response was not ok: ${response.status}`);
     }
@@ -55,7 +56,7 @@ export const requireAccessControl = authSetup.requireAccessControl;
 export const enableUnauthenticatedAccess = authSetup.enableUnauthenticatedAccess;
 export const requireLogin = requireAccessControl && !enableUnauthenticatedAccess;
 export const loginRequest = {
-    scopes: [import.meta.env.VITE_API_SCOPE_URI] // 既存のスコープに、必要なAPIスコープを追加
+    scopes: [API_SCOPE_URI] // 既存のスコープに、必要なAPIスコープを追加
 };
 
 
@@ -121,7 +122,8 @@ export const msalConfig: Configuration = {
     auth: {
         clientId: CLIENTID,
         authority: `https://login.microsoftonline.com/${TENANTID}`, 
-        redirectUri: "https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net",
+        // redirectUri: "https://oshietena-appservice-cqezgee5bccfdzgj.japanwest-01.azurewebsites.net",
+        redirectUri: BACKEND_URI,
         navigateToLoginRequestUrl: false
     },
     cache: {
