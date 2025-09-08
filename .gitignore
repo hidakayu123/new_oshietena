@@ -8,4 +8,4 @@ frontend/.env.production
 /app/__pycache__/
 /new_oshietena/__pycache__/
 
-/new_oshietena/settings.py/
+/new_oshietena/settings.py
