@@ -1,0 +1,99 @@
+/* --- 新規追加: 設定ボタンのスタイル --- */
+.settings-toggle-button {
+  position: fixed; /* 画面に固定 */
+  top: 70px;       /* 上から20px */
+  right: 10px;      /* 右から20px */
+  
+  /* ボタンのデザイン */
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 50%; /* 円形にする */
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  
+  /* アイコンを中央に配置 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* 影をつけて立体感を出す */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  
+  /* オーバーレイ(100)やパネル(99)より手前に表示 */
+  z-index: 102; 
+  
+  /* ホバー時のアニメーション */
+  transition: transform 0.2s ease-in-out;
+}
+
+.settings-toggle-button:hover {
+  /* 少し回転させる */
+  transform: rotate(45deg); 
+}
+
+/* ボタン内のSVGアイコンの色 */
+.settings-toggle-button svg {
+  fill: #333;
+}
+
+
+/* --- 変更: パネル本体のスタイル --- */
+.EditPrompt {
+  position: fixed;
+  top: 60px;
+  right: 0;
+  height: 100vh; /* 画面の高さ 100% */
+  
+  /* ↓↓↓ ここを変更 ↓↓↓ */
+  width: 100vw;   /* 画面の幅 100% (フルスクリーン) */
+  /* ↑↑↑ ここを変更 ↑↑↑ */
+  
+  background-color: white;
+  box-shadow: -3px 0 10px rgba(0, 0, 0, 0.2);
+  
+  /* 普段は画面の右側(100%分)に隠しておく */
+  transform: translateX(100%); 
+  
+  /* スライドアニメーション (0.4秒) */
+  transition: transform 0.4s ease-in-out; 
+  z-index: 100; /* ボタン(101)より後ろ、オーバーレイ(99)より手前 */
+}
+
+/* 'open' クラスが付いた時にスライドイン */
+.EditPrompt.open {
+  transform: translateX(0);
+}
+
+
+/* --- 変更なし: オーバーレイ --- */
+.EditPrompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); /* 少し濃くしました */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
+  z-index: 99; /* 一番後ろ */
+}
+
+.EditPrompt-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+
+/* --- 変更: コンテンツ領域 --- */
+.EditPrompt-content {
+  padding: 20px;
+  height: 100%; /* パネル全体でスクロール可能に */
+  overflow-y: auto; /* 内容が多ければスクロールバー */
+  
+  /* (推奨) フルスクリーンだと横幅が広すぎるため、
+     コンテンツの最大幅を決めて中央寄せにすると読みやすいです */
+  max-width: 900px;
+  margin: 60px; /* 中央寄せ */
+}

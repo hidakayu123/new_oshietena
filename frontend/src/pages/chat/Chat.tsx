@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 
 // Third-party library imports
-import { useMsal } from "@azure/msal-react";
+import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +29,7 @@ import { QuestionInput } from "../../components/QuestionInput";
 import { UserChatMessage } from "../../components/UserChatMessage";
 import Sidebarmenu from '../../components/menu/menu';
 import SimpleModal from "./SimpleModal";
+import EditPrompt from '../../components/UiEditPrompt/UiEditPrompt';
 
 // Assets & Styles
 import appLogo from "../../assets/applogo.svg";
@@ -38,6 +39,13 @@ interface ChatProps {
   initialAnswers?: InitialAnswerRaw[];
   targetId?: string | null;
   historyBoxId?: string | null;
+}
+
+// ユーザー情報の型を定義しておくと便利
+interface UserAccount {
+  name: string;
+  username: string; // UPN (email address)
+  // 他に必要な情報があればここに追加
 }
 
 const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
@@ -75,6 +83,18 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
             return [];
         });
         console.info(answers)
+    const { accounts } = useMsal();
+    const isAuthenticated = useIsAuthenticated();
+    let currentUser: UserAccount | undefined = undefined;
+
+    // ログインしているか確認
+    if (isAuthenticated && accounts.length > 0) {
+        // 必要な情報を抽出
+        currentUser = {
+        name: accounts[0].name || "ゲスト",
+        username: accounts[0].username,
+        };
+    }
     const isHistoryPanelOpen: boolean = false;
     const promptTemplate: string = "";
     const temperature: number = 0.3;
@@ -358,13 +378,16 @@ const Chat = ({ initialAnswers, targetId ,historyBoxId }: ChatProps) => {
             <Helmet>
                 <title>{t("pageTitle")}</title>
             </Helmet>
-            <div className={styles.commandsSplitContainer}>
+            {/* <div className={styles.commandsSplitContainer}>
                 <div className={styles.commandsContainer}>
-                </div>
-                <div className={styles.commandsContainer}>
-                    <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
-                </div>
+                </div> */}
+            <div className={styles.commandsContainer}>
+                <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
             </div>
+            {/* </div> */}
+            {currentUser && currentUser.username === 'hidakayu@systenabsdx.onmicrosoft.com' && (
+                <EditPrompt user={currentUser} />
+            )}
             <Sidebarmenu onNewChat={clearChat} /> 
             <div className={styles.chatRoot} style={{ marginLeft: isHistoryPanelOpen ? "300px" : "0" }}>
                 <div className={styles.chatContainer}>

@@ -109,12 +109,13 @@
     padding-left: 1rem;
     padding-right: 1rem;
     align-self: flex-end;
+    margin-right: 50px;
     margin-left: auto;
 }
 
-.commandButton {
+/* .commandButton {
     margin-bottom: 1.25rem;
-}
+} */
 
 .spinner-container {
   display: flex;
@@ -171,8 +172,7 @@
     }
 
     .commandButton {
-        margin-right: 1.25rem;
-        margin-bottom: 1.25rem;
+        margin-right: 20px;
     }
 
     .chatMessageGpt {
