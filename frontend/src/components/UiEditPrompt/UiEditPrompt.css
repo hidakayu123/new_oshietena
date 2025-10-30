@@ -1,3 +1,137 @@
+/* ======================================= */
+/* 1. パネル全体とオーバーレイ
+/* ======================================= */
+
+/* --- オーバーレイ --- */
+.EditPrompt-overlay {
+  position: fixed;
+  top: 60px;
+  right: 0;
+  bottom: 0;
+  width: 100%; 
+  background-color: rgba(0,0,0,0.3);
+  display: flex;
+  z-index: 100;
+}
+
+/* --- パネル本体 --- */
+.panel {
+  position: fixed;
+  top: 60px; 
+  height: calc(100vh - 60px);
+  width: 100vw; 
+  background-color: white;
+  display: flex;
+  flex-direction: row;
+  transform: translateX(calc(100% - 250px)); 
+  transition: transform 0.3s ease;
+  z-index: 102;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+}
+
+/* --- パネル（開いた状態） --- */
+.panel.open {
+  transform: translateX(0); /* 全画面表示 */
+}
+
+
+/* ======================================= */
+/* 2. 左側: ライブラリ (PromptList)
+/* ======================================= */
+
+/* 左側: PromptList */
+.panel .library {
+  width: 250px;
+  min-width: 250px;
+  background-color: #fff;
+  border-right: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  height: 100%;       /* パネルと同じ高さ */
+  overflow-y: auto;   /* 縦スクロール */
+}
+
+.prompt-list {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.prompt-list-item {
+  padding: 12px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #555;
+}
+
+.prompt-list-item.selected {
+  background-color: #555;
+}
+
+.prompt-list-item:hover {
+  background-color: #444;
+}
+
+
+/* ======================================= */
+/* 3. 右側: エディタ (PromptEditor)
+/* ======================================= */
+
+/* 右側: PromptEditor */
+.panel .editor-container {
+  flex-grow: 1;       /* 残り幅を自動で占有 */
+  min-width: 0;       /* Flexboxの収縮を許可（重要） */
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #fff;
+}
+
+.editor-header {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.editor-form label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.editor-form input[type="text"] {
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.editor-form textarea {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  flex-grow: 1; /* 高さを可変に */
+  min-height: 150px; /* 最小高さ */
+}
+
+.editor-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #888;
+  font-size: 18px;
+}
+
+
+/* ======================================= */
+/* 4. 各種ボタン
+/* ======================================= */
+
 /* --- 新規追加: 設定ボタンのスタイル --- */
 .settings-toggle-button {
   position: fixed; /* 画面に固定 */
@@ -21,7 +155,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   
   /* オーバーレイ(100)やパネル(99)より手前に表示 */
-  z-index: 102; 
+  z-index: 104; 
   
   /* ホバー時のアニメーション */
   transition: transform 0.2s ease-in-out;
@@ -37,63 +171,69 @@
   fill: #333;
 }
 
-
-/* --- 変更: パネル本体のスタイル --- */
-.EditPrompt {
-  position: fixed;
-  top: 60px;
-  right: 0;
-  height: 100vh; /* 画面の高さ 100% */
-  
-  /* ↓↓↓ ここを変更 ↓↓↓ */
-  width: 100vw;   /* 画面の幅 100% (フルスクリーン) */
-  /* ↑↑↑ ここを変更 ↑↑↑ */
-  
-  background-color: white;
-  box-shadow: -3px 0 10px rgba(0, 0, 0, 0.2);
-  
-  /* 普段は画面の右側(100%分)に隠しておく */
-  transform: translateX(100%); 
-  
-  /* スライドアニメーション (0.4秒) */
-  transition: transform 0.4s ease-in-out; 
-  z-index: 100; /* ボタン(101)より後ろ、オーバーレイ(99)より手前 */
+/* --- ライブラリ内の「+ New Prompt」ボタン --- */
+.new-prompt-btn {
+  background-color: #0078d4;
+  color: white;
+  border: none;
+  padding: 12px;
+  margin: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 4px;
+  text-align: left;
 }
 
-/* 'open' クラスが付いた時にスライドイン */
-.EditPrompt.open {
-  transform: translateX(0);
+.new-prompt-btn:hover {
+  background-color: #005a9e;
 }
 
-
-/* --- 変更なし: オーバーレイ --- */
-.EditPrompt-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5); /* 少し濃くしました */
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
-  z-index: 99; /* 一番後ろ */
+/* --- エディタ内のボタンバー (Delete, Save, Apply) --- */
+.button-bar {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 
-.EditPrompt-overlay.open {
-  opacity: 1;
-  visibility: visible;
+.button-bar button {
+  border: none;
+  padding: 10px 20px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-right: 10px;
 }
 
+.delete-btn { background-color: #d9534f; }
+.delete-btn:hover { background-color: #c9302c; }
 
-/* --- 変更: コンテンツ領域 --- */
-.EditPrompt-content {
-  padding: 20px;
-  height: 100%; /* パネル全体でスクロール可能に */
-  overflow-y: auto; /* 内容が多ければスクロールバー */
-  
-  /* (推奨) フルスクリーンだと横幅が広すぎるため、
-     コンテンツの最大幅を決めて中央寄せにすると読みやすいです */
-  max-width: 900px;
-  margin: 60px; /* 中央寄せ */
+.save-btn { background-color: #5cb85c; }
+.save-btn:hover { background-color: #449d44; }
+
+.apply-btn { background-color: #0275d8; }
+.apply-btn:hover { background-color: #025aa5; }
+
+/* --- ライブラリ内の「編集パネルを開く」ボタン --- */
+.open-editor-btn {
+  position: sticky;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  margin-top: 10px; /* 多少余白 */
+  padding: 10px 14px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.open-editor-btn:hover {
+  background-color: #0069d9;
+}
+
+.open-editor-btn:active {
+  transform: scale(0.98);
+  background-color: #005cbf;
 }

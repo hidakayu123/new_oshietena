@@ -58,7 +58,7 @@ const router = createHashRouter([
 
 // アプリケーションを起動するための非同期関数を定義します
 async function main() {
-    // 1. MSALインスタンスの初期化を待ちます (これが抜けていました)
+    // 1. MSALインスタンスの初期化を待ちます
     await msalInstance.initialize();
 
     // イベントコールバックの設定
