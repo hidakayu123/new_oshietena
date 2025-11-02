@@ -23,15 +23,20 @@
   background-color: white;
   display: flex;
   flex-direction: row;
-  transform: translateX(calc(100% - 250px)); 
+  transform: translateX(100%); 
   transition: transform 0.3s ease;
   z-index: 102;
   box-shadow: -2px 0 5px rgba(0,0,0,0.3);
 }
 
-/* --- パネル（開いた状態） --- */
-.panel.open {
-  transform: translateX(0); /* 全画面表示 */
+/* 左側 250px だけ表示 */
+.panel.partial-open {
+  transform: translateX(calc(100% - 250px));
+}
+
+/* 全体表示 */
+.panel.full-open {
+  transform: translateX(0);
 }
 
 
@@ -59,15 +64,21 @@
 .prompt-list-item {
   padding: 12px 10px;
   cursor: pointer;
+  border-top: 1px solid #555;
+}
+
+.prompt-list-item:last-child {
   border-bottom: 1px solid #555;
 }
 
 .prompt-list-item.selected {
-  background-color: #555;
+  background-color: #ef8c8c;
+  cursor: default; /* 選択中はマウスカーソルを変えるのもおすすめ */
 }
 
-.prompt-list-item:hover {
-  background-color: #444;
+/* selectedじゃない要素だけホバー効果をつける */
+.prompt-list-item:not(.selected):hover {
+  background-color: #e2dfdf;
 }
 
 
@@ -93,6 +104,7 @@
 .editor-form {
   display: flex;
   flex-direction: column;
+  height: 70vh;
   flex-grow: 1;
 }
 
@@ -211,8 +223,8 @@
 .save-btn { background-color: #5cb85c; }
 .save-btn:hover { background-color: #449d44; }
 
-.apply-btn { background-color: #0275d8; }
-.apply-btn:hover { background-color: #025aa5; }
+.new-btn { background-color: #0275d8; }
+.new-btn:hover { background-color: #025aa5; }
 
 /* --- ライブラリ内の「編集パネルを開く」ボタン --- */
 .open-editor-btn {
@@ -236,4 +248,49 @@
 .open-editor-btn:active {
   transform: scale(0.98);
   background-color: #005cbf;
+}
+
+textarea {
+  flex-grow: 1;         /* 残りの高さをすべて占有 */
+  resize: none;
+  overflow: auto;       /* 溢れたらスクロール */
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;        /* flexboxで高さ計算が正しくなるように */
+}
+
+/* フォーカス時 */
+textarea:focus {
+  border-color: #0078d7;
+  box-shadow: 0 0 0 2px rgba(0, 120, 215, 0.2);
+  outline: none;
+}
+
+.appling-prompt {
+  background-color: #064270;
+  color: white;
+  border: none;
+  height: 35px;          /* 高さは固定 */
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 4px;
+  text-align: center;
+
+  display: flex;
+  align-items: center;       /* 縦中央 */
+  justify-content: center;   /* ボタン内の文字を中央 */
+
+  padding: 0 16px;           /* 横の余白を追加 */
+  white-space: nowrap;        /* 改行させずに1行で表示 */
+
+  position: fixed;            /* 画面固定 */
+  top: 77px;                  /* 高さはそのまま */
+  left: 50%;                  /* 横方向中央 */
+  transform: translateX(-50%); /* 自分の幅の半分だけ左にずらす */
 }

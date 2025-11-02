@@ -11,7 +11,7 @@ interface UserAccount {
 }
 
 interface Prompt {
-  id: number | null;
+  id: number | null | undefined;
   title: string;
   description: string;
 }
@@ -41,47 +41,56 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
   const [showEditor, setShowEditor] = useState(false);
 
   function openSettings() {
-    setShowEditor(false);
+    setTimeout(() => {
+      setShowEditor(false);
+    }, 10); 
   }
 
   // --- プロンプト管理 ---
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
 
-  const [panelClass, setPanelClass] = useState('');
+  const [panelState, setpanelState] = useState('');
+  const [panelMode, setPanelMode] = useState<'hidden' | 'partial' | 'full'>('hidden');
+  const [applingPrompt, setapplingPrompt] = useState('');
 
  useEffect(() => {
+  setPanelMode('hidden');
   if (showEditor) {
-    // showEditor が true になった時の処理
     const timer = setTimeout(() => {
-      // この中身が実行される時点では showEditor は true
-      setPanelClass('open'); 
+      setPanelMode('full');
+      setpanelState('編集パネルを閉じる');
     }, 10); 
 
     // showEditor が false になったらタイマーをキャンセル
     return () => clearTimeout(timer);
 
   } else {
-    // showEditor が false になった時の処理 (タイマー不要)
-    setPanelClass('');
+    requestAnimationFrame(() => {
+      setPanelMode('partial');
+      setpanelState('編集パネルを開く');
+    }); 
   }
-}, [showEditor]);
+  // プロンプトモック
+  setPrompts(MOCK_PROMPTS);
+}, [showEditor, isOpen]);
 
-  useEffect(() => {
-    setPrompts(MOCK_PROMPTS);
-  }, []);
-
-  const handleNewPrompt = () => {
-    setSelectedPrompt({
-      id: null,
-      title: '',
-      description: '',
-    });
+  const handleApplyPrompt = (selectedPrompt: Prompt | null) => {
+    if (selectedPrompt)
+      setapplingPrompt(selectedPrompt.title);
+      toggleSidebar();
+      setShowEditor(false);
   };
 
-  const handleSelectPrompt = (prompt: Prompt) => {
+const handleSelectPrompt = (prompt: Prompt | null) => {
+  if (selectedPrompt?.id === prompt?.id || null) {
+    // 既に選択されているプロンプトをもう一度押した場合 → 選択解除
+    setSelectedPrompt(null);
+  } else {
+    // それ以外は選択
     setSelectedPrompt(prompt);
-  };
+  }
+};
 
   const handleSavePrompt = async (promptToSave: Prompt) => {
     if (promptToSave.id) {
@@ -107,16 +116,15 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
     alert('削除しました！');
   };
 
-  const handleApplyPrompt = (prompt: Prompt) => {
-    alert(`プロンプトを適用します:\n\n${prompt.description}`);
-  };
-
-  // エディタのクラス名
-  const editPromptClass = `panel ${showEditor ? 'open' : ''}`;
   
 
   return (
     <>
+      {applingPrompt && (
+        <button className="appling-prompt">
+          {applingPrompt}
+        </button>
+      )}
       {/* 開閉ボタン */}
       <button
         className="settings-toggle-button"
@@ -139,32 +147,31 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
           />
 
           {/* パネル: 左側リスト + 右側エディタ */}
-          <div className={`panel ${panelClass}`} onClick={e => e.stopPropagation()}>
-            {/* 左側: プロンプリスト */}
-            {/* {showPromptList && ( */}
+          <div className={`panel ${
+            panelMode === 'partial' ? 'partial-open' :
+            panelMode === 'full' ? 'full-open' : ''
+          }`}>
               <div className="library">
                 <PromptList
                   prompts={prompts}
+                  selectedPrompt={selectedPrompt}
                   selectedPromptId={selectedPrompt ? selectedPrompt.id : null}
+                  panelState={panelState}
                   onSelectPrompt={handleSelectPrompt}
-                  onNewPrompt={handleNewPrompt}
-                  onOpenEditor={() => setShowEditor(true)}
+                  onNewPrompt={() => handleApplyPrompt(selectedPrompt)}
+                  onOpenEditor={() => setShowEditor(prev => !prev)}
                 />
               </div>
-            {/* )} */}
             
 
             {/* 右側: エディタ */}
             <div className="editor-container">
-              {/* {showEditor && ( */}
                 <PromptEditor
                   selectedPrompt={selectedPrompt}
                   onSave={handleSavePrompt}
                   onDelete={handleDeletePrompt}
-                  onApply={handleApplyPrompt}
-                  onClose={() => setShowEditor(false)}
+                  setSelectedPrompt={handleSelectPrompt}
                 />
-              {/* )} */}
             </div>
           </div>
         </>
@@ -177,17 +184,19 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
 
 interface PromptListProps {
   prompts: Prompt[];
-  selectedPromptId: number | null;
+  selectedPrompt: Prompt | null;
+  selectedPromptId: number | null | undefined;
+  panelState: string;
   onSelectPrompt: (prompt: Prompt) => void;
-  onNewPrompt: () => void;
+  onNewPrompt: (prompt: Prompt | null) => void;
 }
 
-function PromptList({ prompts, selectedPromptId, onSelectPrompt, onNewPrompt, onOpenEditor }: PromptListProps & { onOpenEditor: () => void }) {
+function PromptList({ prompts, selectedPrompt, selectedPromptId, panelState, onSelectPrompt, onNewPrompt, onOpenEditor }: PromptListProps & { onOpenEditor: () => void }) {
   return (
     <>
       <h2 style={{ padding: '10px 10px 0' }}>Prompt Library</h2>
-      <button className="new-prompt-btn" onClick={onNewPrompt}>
-        + New Prompt
+      <button className="new-prompt-btn" onClick={() => onNewPrompt(selectedPrompt)}>
+        適用
       </button>
       <div className="prompt-list">
         {prompts.map(prompt => (
@@ -202,7 +211,7 @@ function PromptList({ prompts, selectedPromptId, onSelectPrompt, onNewPrompt, on
       </div>
       
       <button className="open-editor-btn" onClick={onOpenEditor}>
-        📝 編集パネルを開く
+        {panelState}
       </button>
     </>
   );
@@ -212,11 +221,10 @@ interface PromptEditorProps {
   selectedPrompt: Prompt | null;
   onSave: (prompt: Prompt) => void;
   onDelete: (promptId: number | null) => void;
-  onApply: (prompt: Prompt) => void;
-  onClose: () => void;
+  setSelectedPrompt: (prompt: Prompt | null) => void;
 }
 
-function PromptEditor({ selectedPrompt, onSave, onDelete, onApply }: PromptEditorProps) {
+function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: PromptEditorProps) {
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -226,20 +234,16 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, onApply }: PromptEdito
       setTitle(selectedPrompt.title);
       setDescription(selectedPrompt.description);
     }
+    else {
+      // 初期画面用に空にする
+      setTitle('');
+      setDescription('');
+    }
   }, [selectedPrompt]);
-
-  if (!selectedPrompt) {
-    return (
-      <div className="editor-container">
-        <div className="editor-placeholder">
-          左のリストからプロンプトを選択するか、「+ New Prompt」で新規作成してください。
-        </div>
-      </div>
-    );
-  }
 
   const handleSaveClick = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedPrompt) return;
     onSave({
       ...selectedPrompt,
       title: title,
@@ -248,11 +252,14 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, onApply }: PromptEdito
   };
 
   const handleDeleteClick = () => {
+    if (!selectedPrompt || selectedPrompt.id == null) return;
     onDelete(selectedPrompt.id);
   };
   
-  const handleApplyClick = () => {
-    onApply({ ...selectedPrompt, title, description });
+  const handleNewClick = () => {
+    setTitle('');
+    setDescription('');
+    setSelectedPrompt(null);
   };
 
   return (
@@ -280,7 +287,7 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, onApply }: PromptEdito
             type="button"
             className="delete-btn"
             onClick={handleDeleteClick}
-            disabled={!selectedPrompt.id}
+            disabled={!selectedPrompt?.id}
           >
             Delete Prompt
           </button>
@@ -291,10 +298,10 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, onApply }: PromptEdito
 
           <button
             type="button"
-            className="apply-btn"
-            onClick={handleApplyClick}
+            className="new-btn"
+            onClick={handleNewClick}
           >
-            Apply Prompt
+            New Prompt
           </button>
         </div>
       </form>
