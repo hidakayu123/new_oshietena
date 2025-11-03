@@ -15,6 +15,7 @@ from app.open_ai_service import handle_chatbot_response, stream_chatbot_response
 from app.ai_search_service import process_target_index, summarize_vector_results
 from app.save_chat import create_new_conversation
 from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
+from app.save_prompt import save_prompt
 from django.views.generic import TemplateView
 import traceback
 from django.conf import settings
@@ -150,6 +151,38 @@ class ChatHistoryView(APIView):
             print("🔥 Error in ChatHistoryView.post():", e)
             traceback.print_exc()
             return Response({"error": f"Failed to save chat: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class SavePromptView(APIView):
+    """専用プロンプトの保存を処理するビュー"""
+    authentication_classes = [AzureADJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            user_id = request.user.username
+            data = request.data
+
+            # 必須フィールドチェック（バリデーション）
+            required_fields = ['tenantId', 'userId', 'title', 'description']
+            for field in required_fields:
+                if field not in data:
+                    return Response({"error": f"Missing field: {field}"}, status=400)
+
+            # save_prompt関数を呼び出す
+            save_prompt(
+                tenant_id=data['tenantId'],
+                user_id=user_id,
+                id=data.get('id'),  # id は新規時に無い場合もあるため get()
+                title=data['title'],
+                description=data['description']
+            )
+
+            return Response({"message": "保存しました！"}, status=200)
+
+        except Exception as e:
+            print("❌ SavePromptView error:", e)
+            return Response({"error": str(e)}, status=500)
 
 # --- フロントエンド設定用のビュー（認証不要） ---
 

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 // CSSファイルは UiEditPrompt.css を使うと仮定します
 import './UiEditPrompt.css'; 
 import gearIcon from '../../assets/gear-icon.svg';
-
+import { useLogin, getToken } from "../../authConfig";
+import { useMsal, useIsAuthenticated } from "@azure/msal-react";
+import { v4 as uuidv4 } from "uuid";
 // --- 型定義 ---
 
 interface UserAccount {
@@ -11,7 +13,7 @@ interface UserAccount {
 }
 
 interface Prompt {
-  id: number | null | undefined;
+  id: string | null | undefined;
   title: string;
   description: string;
 }
@@ -22,9 +24,9 @@ interface UiEditPromptProps {
 
 // --- モックデータ ---
 const MOCK_PROMPTS: Prompt[] = [
-  { id: 1, title: 'ブログ記事のアイデア', description: '新しいブログ記事のアイデアを5個提案してください。' },
-  { id: 2, title: 'メールの件名', description: '製品Aのプロモーションメールの件名を3パターン考えてください。' },
-  { id: 3, title: 'コードのリファクタリング', description: '以下のPythonコードをリファクタリングしてください。' },
+  { id: "1", title: 'ブログ記事のアイデア', description: '新しいブログ記事のアイデアを5個提案してください。' },
+  { id: "2", title: 'メールの件名', description: '製品Aのプロモーションメールの件名を3パターン考えてください。' },
+  { id: "3", title: 'コードのリファクタリング', description: '以下のPythonコードをリファクタリングしてください。' },
 ];
 
 // --- メインコンポーネント ---
@@ -53,6 +55,8 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
   const [panelState, setpanelState] = useState('');
   const [panelMode, setPanelMode] = useState<'hidden' | 'partial' | 'full'>('hidden');
   const [applingPrompt, setapplingPrompt] = useState('');
+
+  const client = useLogin ? useMsal().instance : undefined;
 
  useEffect(() => {
   setPanelMode('hidden');
@@ -93,20 +97,53 @@ const handleSelectPrompt = (prompt: Prompt | null) => {
 };
 
   const handleSavePrompt = async (promptToSave: Prompt) => {
+    const token = client ? await getToken(client) : undefined;
+    const userId = client?.getActiveAccount()?.username || "unknown-user";
+    const activeAccount = client?.getActiveAccount();
+    const tenantId = activeAccount?.tenantId;
+    let savedPrompt: Prompt;
     if (promptToSave.id) {
       console.log('Updating prompt:', promptToSave);
       setPrompts(prompts.map(p => p.id === promptToSave.id ? promptToSave : p));
+      savedPrompt = promptToSave;
     } else {
-      const newId = Math.max(...prompts.map(p => p.id || 0)) + 1;
-      const newPrompt: Prompt = { ...promptToSave, id: newId };
+      const newPrompt: Prompt = { ...promptToSave, id: uuidv4() };
       console.log('Creating new prompt:', newPrompt);
       setPrompts([...prompts, newPrompt]);
       setSelectedPrompt(newPrompt);
+      savedPrompt = newPrompt;
     }
-    alert('保存しました！');
+    // ✅ 更新・追加したものだけDBへ保存
+    if (savedPrompt && token) {
+      try {
+        const res = await fetch(`/api/saveprompt/`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tenantId: tenantId,           // どこかで保持しているテナントID
+            userId: userId,               // ログインユーザーID
+            id: savedPrompt.id,           // 新規は uuid
+            title: savedPrompt.title,
+            description: savedPrompt.description,
+          }),
+        });
+
+        if (!res.ok) throw new Error("Failed to save prompt");
+        console.log("✅ Saved to DB:", savedPrompt);
+      } catch (err) {
+        console.error("❌ Save failed:", err);
+        alert("保存に失敗しました");
+        return;
+      }
+    }
+
+    alert("保存しました！");
   };
 
-  const handleDeletePrompt = async (promptId: number | null) => {
+  const handleDeletePrompt = async (promptId: string | null) => {
     if (!promptId || !window.confirm('本当に削除しますか？')) {
       return;
     }
@@ -185,7 +222,7 @@ const handleSelectPrompt = (prompt: Prompt | null) => {
 interface PromptListProps {
   prompts: Prompt[];
   selectedPrompt: Prompt | null;
-  selectedPromptId: number | null | undefined;
+  selectedPromptId: string | null | undefined;
   panelState: string;
   onSelectPrompt: (prompt: Prompt) => void;
   onNewPrompt: (prompt: Prompt | null) => void;
@@ -220,7 +257,7 @@ function PromptList({ prompts, selectedPrompt, selectedPromptId, panelState, onS
 interface PromptEditorProps {
   selectedPrompt: Prompt | null;
   onSave: (prompt: Prompt) => void;
-  onDelete: (promptId: number | null) => void;
+  onDelete: (promptId: string | null) => void;
   setSelectedPrompt: (prompt: Prompt | null) => void;
 }
 
@@ -228,27 +265,42 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: P
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
 
   useEffect(() => {
     if (selectedPrompt) {
       setTitle(selectedPrompt.title);
       setDescription(selectedPrompt.description);
+      setErrors({}); 
     }
     else {
       // 初期画面用に空にする
       setTitle('');
       setDescription('');
+      setErrors({}); 
     }
   }, [selectedPrompt]);
 
-  const handleSaveClick = (e: React.FormEvent) => {
+  const handleSaveClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.info("保存押下1");
     e.preventDefault();
-    if (!selectedPrompt) return;
-    onSave({
-      ...selectedPrompt,
-      title: title,
-      description: description,
-    });
+
+    // 入力チェック
+    const newErrors: typeof errors = {};
+    if (!title.trim()) newErrors.title = "タイトルを入力してください";
+    if (!description.trim()) newErrors.description = "プロンプトを入力してください";
+
+    setErrors(newErrors);
+
+    // 保存するプロンプトを作成
+    if (Object.keys(newErrors).length === 0){
+      const promptforDB: Prompt = selectedPrompt
+        ? { ...selectedPrompt, title, description } // 既存プロンプトの更新
+        : { id: uuidv4(), title, description };     // 新規プロンプト作成
+
+      onSave(promptforDB); // 親コンポーネントに保存処理を渡す
+    }
+
   };
 
   const handleDeleteClick = () => {
@@ -260,29 +312,37 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: P
     setTitle('');
     setDescription('');
     setSelectedPrompt(null);
+    setErrors({}); 
   };
 
   return (
     <div className="editor-container">
       <h2 className="editor-header">Edit Prompt</h2>
-      <form className="editor-form" onSubmit={handleSaveClick}>
+
+      {/* フォームは submit を使わず、ボタン単位で処理 */}
+      <form className="editor-form" onSubmit={(e) => e.preventDefault()}>
         <label htmlFor="title">Title</label>
         <input
           id="title"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          className={errors.title ? "input-error" : ""}
         />
-        
+        <span className="error-text">{errors.title || " "}</span>
+
         <label htmlFor="description">Prompt Description</label>
         <textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={15}
+          className={errors.description ? "input-error" : ""}
         />
+        <span className="error-text">{errors.description || " "}</span>
 
         <div className="button-bar">
+          {/* Delete ボタン */}
           <button
             type="button"
             className="delete-btn"
@@ -292,10 +352,16 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: P
             Delete Prompt
           </button>
           
-          <button type="submit" className="save-btn">
+          {/* Save ボタン */}
+          <button
+            type="button"               // submit ではなく button
+            className="save-btn"
+            onClick={handleSaveClick}   // ここでのみ発火
+          >
             Save Prompt
           </button>
 
+          {/* New ボタン */}
           <button
             type="button"
             className="new-btn"

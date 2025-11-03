@@ -19,7 +19,7 @@ from django.urls import path
 from new_oshietena import views
 from app.chat_count import ChatCountView
 from django.urls import path
-from .views import ChatView, ChatHistoryView, auth_setup, get_csrf_token
+from .views import ChatView, ChatHistoryView, SavePromptView, auth_setup, get_csrf_token
 from .views import FrontendAppView
 
 urlpatterns = [
@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/checkcount/', ChatCountView.as_view(), name='checkcount'),
     path('api/startday/', ChatCountView.as_view(), name='get_startday'),
     path('api/history/', ChatHistoryView.as_view(), name='chat_history'),
+    path('api/saveprompt/', SavePromptView.as_view(), name='saveprompt'),
     path('api/csrf-token', get_csrf_token, name='get_csrf_token'),
     path('api/history/<str:chat_id>/', ChatHistoryView.as_view(), name='get_single_chat'),
 ]
