@@ -58,26 +58,66 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
 
   const client = useLogin ? useMsal().instance : undefined;
 
- useEffect(() => {
-  setPanelMode('hidden');
-  if (showEditor) {
-    const timer = setTimeout(() => {
-      setPanelMode('full');
-      setpanelState('編集パネルを閉じる');
-    }, 10); 
+  useEffect(() => {
+    setPanelMode('hidden');
+    if (showEditor) {
+      const timer = setTimeout(() => {
+        setPanelMode('full');
+        setpanelState('編集パネルを閉じる');
+      }, 10); 
 
-    // showEditor が false になったらタイマーをキャンセル
-    return () => clearTimeout(timer);
+      // showEditor が false になったらタイマーをキャンセル
+      return () => clearTimeout(timer);
 
-  } else {
-    requestAnimationFrame(() => {
-      setPanelMode('partial');
-      setpanelState('編集パネルを開く');
-    }); 
-  }
-  // プロンプトモック
-  setPrompts(MOCK_PROMPTS);
-}, [showEditor, isOpen]);
+    } else {
+      requestAnimationFrame(() => {
+        setPanelMode('partial');
+        setpanelState('編集パネルを開く');
+      }); 
+    }
+    // プロンプトモック
+    setPrompts(MOCK_PROMPTS);
+  }, [showEditor, isOpen]);
+
+
+  // プロンプト取得表示
+  useEffect(() => {
+    const load = async () => {
+      if (!client) return;
+      const token = await getToken(client);
+      if (!token) return;
+      await fetchPromptsFromDB(token);
+    };
+    load();
+  }, []);
+
+  const fetchPromptsFromDB = async (token: string) => {
+    try {
+      const res = await fetch(`/api/getprompt/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch prompts");
+
+      const data = await res.json();
+
+      // --- 形式を合わせる ---
+      const promptsFromDB: Prompt[] = data.map((p: any) => ({
+        id: String(p.id),
+        title: p.title ?? "",
+        description: p.description ?? "",
+      }));
+
+      setPrompts(promptsFromDB);
+      console.log("✅ Updated prompts from DB:", promptsFromDB);
+    } catch (err) {
+      console.error("❌ Failed to fetch prompts:", err);
+    }
+  };
 
   const handleApplyPrompt = (selectedPrompt: Prompt | null) => {
     if (selectedPrompt)
@@ -86,15 +126,15 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
       setShowEditor(false);
   };
 
-const handleSelectPrompt = (prompt: Prompt | null) => {
-  if (selectedPrompt?.id === prompt?.id || null) {
-    // 既に選択されているプロンプトをもう一度押した場合 → 選択解除
-    setSelectedPrompt(null);
-  } else {
-    // それ以外は選択
-    setSelectedPrompt(prompt);
-  }
-};
+  const handleSelectPrompt = (prompt: Prompt | null) => {
+    if (selectedPrompt?.id === prompt?.id || null) {
+      // 既に選択されているプロンプトをもう一度押した場合 → 選択解除
+      setSelectedPrompt(null);
+    } else {
+      // それ以外は選択
+      setSelectedPrompt(prompt);
+    }
+  };
 
   const handleSavePrompt = async (promptToSave: Prompt) => {
     const token = client ? await getToken(client) : undefined;
@@ -133,6 +173,8 @@ const handleSelectPrompt = (prompt: Prompt | null) => {
 
         if (!res.ok) throw new Error("Failed to save prompt");
         console.log("✅ Saved to DB:", savedPrompt);
+        // --- 保存成功後：最新データを取得 ---
+        await fetchPromptsFromDB(token);
       } catch (err) {
         console.error("❌ Save failed:", err);
         alert("保存に失敗しました");

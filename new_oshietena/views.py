@@ -16,6 +16,7 @@ from app.ai_search_service import process_target_index, summarize_vector_results
 from app.save_chat import create_new_conversation
 from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
 from app.save_prompt import save_prompt
+from app.get_prompt import get_prompt
 from django.views.generic import TemplateView
 import traceback
 from django.conf import settings
@@ -183,6 +184,36 @@ class SavePromptView(APIView):
         except Exception as e:
             print("❌ SavePromptView error:", e)
             return Response({"error": str(e)}, status=500)
+        
+class GetPromptView(APIView):
+    """ログインユーザーのプロンプト一覧を取得するビュー"""
+    authentication_classes = [AzureADJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, **kwargs):
+        try:
+            user_id = request.user.username
+            if not user_id:
+                return Response(
+                    {"error": "User ID not found"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            prompts = get_prompt(user_id)
+
+            if not prompts:
+                print("⚠️ プロンプトが見つかりませんでした")
+                return Response([], status=status.HTTP_200_OK)
+
+            print(f"✅ {len(prompts)} 件のプロンプトを取得")
+            return Response(prompts, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"❌ プロンプト取得中にエラー発生: {e}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 # --- フロントエンド設定用のビュー（認証不要） ---
 
