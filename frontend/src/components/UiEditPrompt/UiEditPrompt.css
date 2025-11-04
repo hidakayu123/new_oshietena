@@ -188,14 +188,30 @@
   color: white;
   border: none;
   padding: 12px;
-  margin: 10px;
+  margin: 10px 10px 0 10px;
   cursor: pointer;
   font-size: 16px;
   border-radius: 4px;
-  text-align: left;
+  text-align: center;
 }
 
 .new-prompt-btn:hover {
+  background-color: #005a9e;
+}
+
+.new-reset-btn {
+  background-color: #0078d4;
+  height: 25px;
+  color: white;
+  border: none;
+  margin: 10px 10px 10px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.new-reset-btn:hover {
   background-color: #005a9e;
 }
 

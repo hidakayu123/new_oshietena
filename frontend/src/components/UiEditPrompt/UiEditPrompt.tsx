@@ -22,12 +22,6 @@ interface UiEditPromptProps {
   user?: UserAccount;
 }
 
-// --- モックデータ ---
-const MOCK_PROMPTS: Prompt[] = [
-  { id: "1", title: 'ブログ記事のアイデア', description: '新しいブログ記事のアイデアを5個提案してください。' },
-  { id: "2", title: 'メールの件名', description: '製品Aのプロモーションメールの件名を3パターン考えてください。' },
-  { id: "3", title: 'コードのリファクタリング', description: '以下のPythonコードをリファクタリングしてください。' },
-];
 
 // --- メインコンポーネント ---
 const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
@@ -75,8 +69,6 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
         setpanelState('編集パネルを開く');
       }); 
     }
-    // プロンプトモック
-    setPrompts(MOCK_PROMPTS);
   }, [showEditor, isOpen]);
 
 
@@ -124,6 +116,12 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
       setapplingPrompt(selectedPrompt.title);
       toggleSidebar();
       setShowEditor(false);
+  };
+
+  const handleResetPrompt = (selectedPrompt: Prompt | null) => {
+    if (selectedPrompt)
+      setapplingPrompt('');
+      setSelectedPrompt(null);
   };
 
   const handleSelectPrompt = (prompt: Prompt | null) => {
@@ -238,6 +236,7 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
                   panelState={panelState}
                   onSelectPrompt={handleSelectPrompt}
                   onNewPrompt={() => handleApplyPrompt(selectedPrompt)}
+                  onResetPrompt={() => handleResetPrompt(selectedPrompt)}
                   onOpenEditor={() => setShowEditor(prev => !prev)}
                 />
               </div>
@@ -268,14 +267,18 @@ interface PromptListProps {
   panelState: string;
   onSelectPrompt: (prompt: Prompt) => void;
   onNewPrompt: (prompt: Prompt | null) => void;
+  onResetPrompt: (prompt: Prompt | null) => void;
 }
 
-function PromptList({ prompts, selectedPrompt, selectedPromptId, panelState, onSelectPrompt, onNewPrompt, onOpenEditor }: PromptListProps & { onOpenEditor: () => void }) {
+function PromptList({ prompts, selectedPrompt, selectedPromptId, panelState, onSelectPrompt, onNewPrompt, onResetPrompt, onOpenEditor }: PromptListProps & { onOpenEditor: () => void }) {
   return (
     <>
       <h2 style={{ padding: '10px 10px 0' }}>Prompt Library</h2>
       <button className="new-prompt-btn" onClick={() => onNewPrompt(selectedPrompt)}>
         適用
+      </button>
+      <button className="new-reset-btn" onClick={() => onResetPrompt(selectedPrompt)}>
+        リセット
       </button>
       <div className="prompt-list">
         {prompts.map(prompt => (
