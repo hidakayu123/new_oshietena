@@ -49,8 +49,12 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
   const [panelState, setpanelState] = useState('');
   const [panelMode, setPanelMode] = useState<'hidden' | 'partial' | 'full'>('hidden');
   const [applingPrompt, setapplingPrompt] = useState('');
-
+  
   const client = useLogin ? useMsal().instance : undefined;
+  
+  const userId = client?.getActiveAccount()?.username || "unknown-user";
+  const activeAccount = client?.getActiveAccount();
+  const tenantId = activeAccount?.tenantId;
 
   useEffect(() => {
     setPanelMode('hidden');
@@ -136,9 +140,6 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
 
   const handleSavePrompt = async (promptToSave: Prompt) => {
     const token = client ? await getToken(client) : undefined;
-    const userId = client?.getActiveAccount()?.username || "unknown-user";
-    const activeAccount = client?.getActiveAccount();
-    const tenantId = activeAccount?.tenantId;
     let savedPrompt: Prompt;
     if (promptToSave.id) {
       console.log('Updating prompt:', promptToSave);
@@ -183,17 +184,49 @@ const UiEditPrompt: React.FC<UiEditPromptProps> = ({ user }) => {
     alert("保存しました！");
   };
 
-  const handleDeletePrompt = async (promptId: string | null) => {
-    if (!promptId || !window.confirm('本当に削除しますか？')) {
-      return;
-    }
-    console.log('Deleting prompt with id:', promptId);
-    setPrompts(prompts.filter(p => p.id !== promptId));
-    setSelectedPrompt(null);
-    alert('削除しました！');
-  };
+  const handleDeletePrompt = async (prompt: Prompt | null) => {
+    if (!prompt) return;
 
-  
+    try {
+      const token = client ? await getToken(client) : undefined;
+      if (!token) {
+        alert("認証トークンを取得できませんでした");
+        return;
+      }
+
+      console.log("🗑 Deleting prompt:", prompt);
+
+      // --- ① 先にローカル状態更新して UI をすぐ反映 ---
+      setPrompts(prev => prev.filter(p => p.id !== prompt.id));
+      setSelectedPrompt(null);
+
+      // --- ② サーバーにも削除リクエスト ---
+      const res = await fetch(`/api/deleteprompt/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId,
+          id: prompt.id,
+        }),
+      });
+
+      // --- ③ サーバー側の結果チェック ---
+      if (!res.ok) {
+        throw new Error(`Failed to delete prompt: ${res.status}`);
+      }
+
+      console.log("✅ Deleted from DB:", prompt);
+
+    } catch (err) {
+      console.error("❌ Delete failed:", err);
+
+      // --- ④ 削除失敗したらローカルを戻す（オプション） ---
+      setPrompts(prev => [...prev, prompt]); // UIを元に戻す
+    }
+  };
 
   return (
     <>
@@ -302,7 +335,7 @@ function PromptList({ prompts, selectedPrompt, selectedPromptId, panelState, onS
 interface PromptEditorProps {
   selectedPrompt: Prompt | null;
   onSave: (prompt: Prompt) => void;
-  onDelete: (promptId: string | null) => void;
+  onDelete: (prompt: Prompt | null) => void;
   setSelectedPrompt: (prompt: Prompt | null) => void;
 }
 
@@ -311,6 +344,7 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: P
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (selectedPrompt) {
@@ -349,8 +383,17 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: P
   };
 
   const handleDeleteClick = () => {
-    if (!selectedPrompt || selectedPrompt.id == null) return;
-    onDelete(selectedPrompt.id);
+    if (!selectedPrompt) return;
+    setShowConfirm(true); // モーダルを表示
+  };
+
+  const handleConfirm = () => {
+    if (selectedPrompt) onDelete(selectedPrompt);
+    setShowConfirm(false); // モーダルを閉じる
+  };
+
+  const handleCancel = () => {
+    setShowConfirm(false); // モーダルを閉じる
   };
   
   const handleNewClick = () => {
@@ -392,7 +435,6 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: P
             type="button"
             className="delete-btn"
             onClick={handleDeleteClick}
-            disabled={!selectedPrompt?.id}
           >
             Delete Prompt
           </button>
@@ -416,6 +458,17 @@ function PromptEditor({ selectedPrompt, onSave, onDelete, setSelectedPrompt }: P
           </button>
         </div>
       </form>
+      {showConfirm && (
+            <div className="confirm-overlay">
+              <div className="confirm-modal">
+                <p>本当に "{selectedPrompt?.title}" を削除しますか？</p>
+                  <div className="confirm-buttons">
+                    <button onClick={handleConfirm}>はい</button>
+                    <button onClick={handleCancel}>キャンセル</button>
+                  </div>
+              </div>
+            </div>
+          )}
     </div>
   );
 }

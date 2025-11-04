@@ -348,3 +348,45 @@ textarea {
   margin-bottom: 10px;
 }
 
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirm-modal {
+  background-color: white;
+  padding: 24px 30px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.confirm-buttons {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-buttons button {
+  flex: 1; /* 横幅を均等に */
+  padding: 10px 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #bacdec; /* 薄い青 */
+  color: #000;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.confirm-buttons button:hover {
+  background-color: #4280f5; /* ホバー時に少し濃く */
+}

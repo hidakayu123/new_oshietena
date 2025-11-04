@@ -17,6 +17,7 @@ from app.save_chat import create_new_conversation
 from app.get_chat_history import fetch_history_for_user, fetch_single_chat_by_id
 from app.save_prompt import save_prompt
 from app.get_prompt import get_prompt
+from app.delete_prompt import delete_prompt
 from django.views.generic import TemplateView
 import traceback
 from django.conf import settings
@@ -174,7 +175,7 @@ class SavePromptView(APIView):
             save_prompt(
                 tenant_id=data['tenantId'],
                 user_id=user_id,
-                id=data.get('id'),  # id は新規時に無い場合もあるため get()
+                id=data['id'],  
                 title=data['title'],
                 description=data['description']
             )
@@ -214,7 +215,38 @@ class GetPromptView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+class DeletePromptView(APIView):
+    """ログインユーザーのプロンプト削除ビュー"""
+    authentication_classes = [AzureADJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request, **kwargs):
+        try:
+            user_id = request.user.username
+            data = request.data
+            prompt_id = data.get("id")
+
+            if not user_id or not prompt_id:
+                return Response(
+                    {"error": "Missing user_id or prompt_id"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            delete_prompt(user_id, prompt_id)
+
+            return Response(
+                {"message": "Prompt deleted successfully"},
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            print(f"❌ プロンプト削除にエラー発生: {e}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
 # --- フロントエンド設定用のビュー（認証不要） ---
 
 def auth_setup(request):
