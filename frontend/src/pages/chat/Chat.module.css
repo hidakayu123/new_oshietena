@@ -51,7 +51,7 @@
     padding: 0 2rem;
     display: flex;
     flex-direction: column;
-    resize: horizontal;
+    /* resize: horizontal; */
     min-width: 50vw;
     scrollbar-width: none;
 }
